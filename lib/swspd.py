@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from geoopt import linalg
 
-from logm import logm
+# from logm import logm
 from utils_spd import busemann_spd
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
