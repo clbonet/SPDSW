@@ -3,6 +3,8 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 
+from geoopt import linalg
+
 from logm import logm
 from utils_spd import busemann_spd
 
@@ -61,13 +63,17 @@ def sliced_cost_spd(Xs, Xt, diagA, u_weights=None, v_weights=None, p=1):
     n_proj, d, _ = diagA.shape
     
     ## Compute logM in advance since we cannot batch it
-    log_Xs = torch.zeros(Xs.shape, device=device)
-    for k in range(len(log_Xs)):
-        log_Xs[k] = logm(Xs[k])
+#     log_Xs = torch.zeros(Xs.shape, device=device)
+#     for k in range(len(log_Xs)):
+#         log_Xs[k] = logm(Xs[k])
         
-    log_Xt = torch.zeros(Xt.shape, device=device)
-    for k in range(len(log_Xt)):
-        log_Xt[k] = logm(Xt[k])
+#     log_Xt = torch.zeros(Xt.shape, device=device)
+#     for k in range(len(log_Xt)):
+#         log_Xt[k] = logm(Xt[k])
+    
+    log_Xs = linalg.sym_logm(Xs)
+    log_Xt = linalg.sym_logm(Xt)
+
 
     ## Busemann Coordinates
     Xps = busemann_spd(log_Xs, diagA).reshape(-1, n_proj)
