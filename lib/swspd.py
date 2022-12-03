@@ -115,3 +115,104 @@ def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
     return sliced_cost_spd(Xs, Xt, diagA=dA, u_weights=u_weights, 
                            v_weights=v_weights, p=p)
 
+
+
+
+def get_quantiles(x, ts, weights=None):
+    """
+        Inputs:
+        - x: 1D values, size: n_projs * n_batch
+        - ts: points at which to evaluate the quantile
+    """
+    n_projs, n_batch = x.shape
+    
+    if weights is None:
+        X_weights = torch.full((n_batch,), 1/n_batch, dtype=x.dtype, device=x.device)
+        X_values, X_sorter = torch.sort(x, -1)
+        X_weights = X_weights[..., X_sorter]
+
+    X_cdf = torch.cumsum(X_weights, -1) 
+        
+    X_index = torch.searchsorted(X_cdf, ts.repeat(n_projs, 1))
+    X_icdf = torch.gather(X_values, -1, X_index.clip(0, n_batch-1))
+        
+    return X_icdf
+
+
+def get_features(x, diagA, ts, weights=None, p=2):
+    """
+        Inputs:
+        - x: ndarray, shape (n_batch, d, d)
+            Samples of SPD
+        - diagA: Diagonal of eigenvalues of Symmetric matrice with norm 1 (format: should be preprocessed by using 
+            diagA = torch.diagonal(A, dim1=-2, dim2=-1)
+            diagA = diagA.unsqueeze(-1)
+            diagA = diagA.repeat(1,1,2)
+        )
+        - ts: uniform samples on [0,1]
+        - weights: weight of each sample, if None, uniform weights
+    """
+    num_projs, _, _ = diagA.shape
+    num_unifs = len(ts)
+    
+    log_x = linalg.sym_logm(x)
+    Xp = busemann_spd(log_x, diagA).reshape(-1, num_projections)
+    q_Xp = get_quantiles(Xp.T, ts, weights)
+    
+    return q_Xp / (num_projs * num_unifs)**(1/p)
+    
+
+
+def sliced_wasserstein_spd_phi(Xs, Xt, num_projectionss, num_ts, 
+                               u_weights=None, v_weights=None, p=2):
+    """
+        Parameters:
+        Xs: ndarray, shape (n_batch, d, d)
+            Samples in the source domain
+        Xt: ndarray, shape (m_batch, d, d)
+            Samples in the target domain
+        num_projections: int
+            Number of projections
+        num_ts: int
+            Number of uniform samples on [0,1] to approximate W in 1D
+        device: str
+        p: float
+            Power of SW. Need to be >= 1.
+    """
+    n, d, _ = Xs.shape
+    device = Xs.device
+    
+    # Random projection directions, shape (d-1, num_projections)
+    theta = np.random.normal(size=(num_projections, d))
+    theta = F.normalize(torch.from_numpy(theta), p=2, dim=-1).type(Xs.dtype).to(device)
+
+    A = theta[:,None] * torch.eye(theta.shape[-1], device=device)
+
+    ## Preprocessing to compute the matrix product using a simple product
+    diagA = torch.diagonal(A, dim1=-2, dim2=-1)
+    dA = diagA.unsqueeze(-1)
+    dA = dA.repeat(1,1,2)
+
+    ts = torch.rand((num_ts,), device=device)
+    
+#     log_Xs = linalg.sym_logm(Xs)
+#     log_Xt = linalg.sym_logm(Xt)
+
+#     ## Busemann Coordinates
+#     Xps = busemann_spd(log_Xs, dA).reshape(-1, num_projections)
+#     Xpt = busemann_spd(log_Xt, dA).reshape(-1, num_projections)
+    
+    
+#     q_Xs = get_quantiles(Xps.T, ts)
+#     q_Xt = get_quantiles(Xpt.T, ts)
+    
+#     features_Xs = q_Xs / np.sqrt(num_projections * num_ts)
+#     features_Xt = q_Xt / np.sqrt(num_projections * num_ts)
+
+    features_Xs = get_features(Xs, dA, ts, u_weights, p=p)
+    features_Xt = get_features(Xt, dA, ts, v_weights, p=p)
+    
+    if p==2:
+        return torch.sum(torch.square(features_Xs-features_Xt))
+    
+
