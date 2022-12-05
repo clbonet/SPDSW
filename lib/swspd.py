@@ -151,12 +151,13 @@ def get_features(x, diagA, ts, weights=None, p=2):
         )
         - ts: uniform samples on [0,1]
         - weights: weight of each sample, if None, uniform weights
+        - p
     """
     num_projs, _, _ = diagA.shape
     num_unifs = len(ts)
     
     log_x = linalg.sym_logm(x)
-    Xp = busemann_spd(log_x, diagA).reshape(-1, num_projections)
+    Xp = busemann_spd(log_x, diagA).reshape(-1, num_projs)
     q_Xp = get_quantiles(Xp.T, ts, weights)
     
     return q_Xp / (num_projs * num_unifs)**(1/p)
