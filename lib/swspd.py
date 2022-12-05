@@ -164,7 +164,7 @@ def get_features(x, diagA, ts, weights=None, p=2):
     
 
 
-def sliced_wasserstein_spd_phi(Xs, Xt, num_projectionss, num_ts, 
+def sliced_wasserstein_spd_phi(Xs, Xt, num_projections, num_ts, 
                                u_weights=None, v_weights=None, p=2):
     """
         Parameters:
