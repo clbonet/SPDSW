@@ -110,7 +110,7 @@ def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
     ## Preprocessing to compute the matrix product using a simple product
     diagA = torch.diagonal(A, dim1=-2, dim2=-1)
     dA = diagA.unsqueeze(-1)
-    dA = dA.repeat(1,1,2)
+    dA = dA.repeat(1,1,d)
     
     return sliced_cost_spd(Xs, Xt, diagA=dA, u_weights=u_weights, 
                            v_weights=v_weights, p=p)
@@ -192,7 +192,7 @@ def sliced_wasserstein_spd_phi(Xs, Xt, num_projections, num_ts,
     ## Preprocessing to compute the matrix product using a simple product
     diagA = torch.diagonal(A, dim1=-2, dim2=-1)
     dA = diagA.unsqueeze(-1)
-    dA = dA.repeat(1,1,2)
+    dA = dA.repeat(1,1,d)
 
     ts = torch.rand((num_ts,), device=device)
     
