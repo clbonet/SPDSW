@@ -26,16 +26,18 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 ntry = args.ntry
 
-ds = [3, 100]
-samples = [int(1e2),int(1e3),int(1e4),int(1e5/2),int(1e5)] #,int(1e6/2)]
+ds = [2, 10]
+# samples = [int(1e2),int(1e3),int(1e4),int(1e5/2),int(1e5)] #,int(1e6/2)]
+samples = [int(1e2),int(1e3/2),int(1e3),int(1e4/2),int(1e4),int(1e5/2),int(1e5)] #,int(1e6/2)]
+
 projs = [200]
 
-L_swspd = np.zeros((len(ds), len(projs), len(samples), ntry))
+L_swspd = np.zeros((len(ds), len(projs), len(samples), ntry+1))
 
 if __name__ == "__main__":    
     for i, d in enumerate(ds):
         for k, n_samples in enumerate(samples):            
-            m0 = D.Wishart(torch.tensor([2], dtype=torch.float64).to(device), torch.eye(2, dtype=torch.float64, device=device))
+            m0 = D.Wishart(torch.tensor([d], dtype=torch.float64).to(device), torch.eye(d, dtype=torch.float64, device=device))
             x0 = m0.sample((n_samples,))[:,0]
             x1 = m0.sample((n_samples,))[:,0]
             
@@ -46,12 +48,12 @@ if __name__ == "__main__":
 
             for j in bar:
                 for l, n_projs in enumerate(projs):
-                    # try:
-                    t0 = time.time()
-                    sw = sliced_wasserstein_spd(x0, x1, n_projs, device, p=2)
-                    L_swspd[i,l,k,j] = time.time()-t0
-                    # except:
-                    #     L_swspd[i,l,k,j] = np.inf
+                    try:
+                        t0 = time.time()
+                        sw = sliced_wasserstein_spd(x0, x1, n_projs, device, p=2)
+                        L_swspd[i,l,k,j] = time.time()-t0
+                    except:
+                        L_swspd[i,l,k,j] = np.inf
 
                     
     for i, d in enumerate(ds):
