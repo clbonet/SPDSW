@@ -5,8 +5,8 @@ from torch.autograd import Function as F
 import functional
 
 dtype=th.double
-# device=th.device('cpu')
-device = "cuda" if th.cuda.is_available() else "cpu"
+device=th.device('cpu')
+# device = "cuda" if th.cuda.is_available() else "cpu"
 
 class BiMap(nn.Module):
     """
@@ -77,6 +77,7 @@ class BatchNormSPD(nn.Module):
             X_centered=functional.CongrG(X_batched,mean,'neg')
         else:
             X_centered=functional.CongrG(X_batched,self.running_mean,'neg')
+            
         X_normalized=functional.CongrG(X_centered,self.weight,'pos')
         return X_normalized.permute(2,3,0,1).contiguous().view(n,n,N,h).permute(2,3,0,1).contiguous()
 
