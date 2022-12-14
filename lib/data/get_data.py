@@ -18,19 +18,21 @@ __email__ = "herschmi@ethz.ch,tinor@ethz.ch"
 
 def get_cov(data):
     fs = 250 # Sampling frequency
+    bw = [25] ## bandwidth
+    forder = 8
+    max_freq = 30
+    ftype = "butter"
 
     time_windows_flt = np.array([[2.5,4.5], [4,6], [2.5,6],
                                 [2.5,3.5], [3,4], [4,5]])*fs
     time_windows = time_windows_flt.astype(int)
     # restrict time windows and frequency bands 
     time_windows = time_windows[2:3] 
+    
 
-    bw = np.array([2,4,8,16,32]) # bandwidth of filtered signals
-    forder= 2
-    ftype = "butter" # ???
 
-    filter_bank = load_filterbank(bw, fs, order=forder, max_freq=40, ftype = ftype)
-        
+    filter_bank = load_filterbank(bandwidth = bw, fs = fs, order = forder, 
+                                  max_freq = max_freq, ftype = ftype)
     
     n_tr_trial, n_channel, _ = data.shape
     n_riemann = int((n_channel+1)*n_channel/2)
@@ -59,7 +61,7 @@ def get_cov(data):
     return cov_mat
 
 
-def get_data(subject,training,PATH):
+def get_data(subject, training, PATH):
 	'''	Loads the dataset 2a of the BCI Competition IV
 	available on http://bnci-horizon-2020.eu/database/data-sets
 

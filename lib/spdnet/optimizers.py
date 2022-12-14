@@ -69,7 +69,7 @@ class WeightVectorOptim():
 class MixOptimizer():
     """ Optimizer with mixed constraints """
 
-    def __init__(self, parameters, optimizer=torch.optim.SGD, lr=1e-2, *args, **kwargs):
+    def __init__(self, parameters, optimizer=torch.optim.SGD, lr=1e-2, lr_sgd=1e-2, *args, **kwargs):
         parameters = list(parameters)
         parameters=[param for param in parameters if param.requires_grad]
         self.lr = lr
