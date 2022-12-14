@@ -60,8 +60,12 @@ geod_curves = []
 ts = torch.linspace(-2,2,100)
 for g in range(num_geod):
     geod =[]
+    angle = np.random.random()*2*np.pi
+    ROT = np.array([[np.cos(angle),-np.sin(angle)],[np.sin(angle),np.cos(angle)]])
+    M_base = np.dot(np.dot(ROT,A[g]),ROT.T) 
+    # M_base = A[g]  # <-- juste les matrices diagonales avec diag \in S^d-1
     for i in range(len(ts)): 
-        geod.append(torch.linalg.matrix_exp(ts[i]*A[g]).cpu().numpy())
+        geod.append(torch.linalg.matrix_exp(ts[i]*M_base).cpu().numpy())
     geod_curves.append(Line(mat2point(np.array(geod))).c(g).lw(4))
 
 
