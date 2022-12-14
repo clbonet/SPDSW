@@ -54,35 +54,28 @@ def emd1D(u_values, v_values, u_weights=None, v_weights=None,p=1, require_sort=T
     return torch.sum(delta * torch.pow(torch.abs(u_icdf - v_icdf), p), axis=-1)
 
 
-def sliced_cost_spd(Xs, Xt, diagA, u_weights=None, v_weights=None, p=1):
+
+def sliced_cost_spd(Xs, Xt, A, u_weights=None, v_weights=None, p=1):
     n, _, _ = Xs.shape
     m, _, _ = Xt.shape
     
     device = Xs.device
 
-    n_proj, d, _ = diagA.shape
+    n_proj, d, _ = A.shape
     
-    ## Compute logM in advance since we cannot batch it
-#     log_Xs = torch.zeros(Xs.shape, device=device)
-#     for k in range(len(log_Xs)):
-#         log_Xs[k] = logm(Xs[k])
-        
-#     log_Xt = torch.zeros(Xt.shape, device=device)
-#     for k in range(len(log_Xt)):
-#         log_Xt[k] = logm(Xt[k])
-    
+    ## Compute logM in advance since we cannot batch it        
     log_Xs = linalg.sym_logm(Xs)
     log_Xt = linalg.sym_logm(Xt)
 
-
     ## Busemann Coordinates
-    Xps = busemann_spd(log_Xs, diagA).reshape(-1, n_proj)
-    Xpt = busemann_spd(log_Xt, diagA).reshape(-1, n_proj)
+    Xps = busemann_spd(log_Xs, A).reshape(-1, n_proj)
+    Xpt = busemann_spd(log_Xt, A).reshape(-1, n_proj)
     
     return torch.mean(emd1D(Xps.T,Xpt.T,
                        u_weights=u_weights,
                        v_weights=v_weights,
                        p=p))
+
 
 
 def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
@@ -105,17 +98,47 @@ def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
     theta = np.random.normal(size=(num_projections, d))
     theta = F.normalize(torch.from_numpy(theta), p=2, dim=-1).type(Xs.dtype).to(device)
     
-    A = theta[:,None] * torch.eye(theta.shape[-1], device=device)
+    D = theta[:,None] * torch.eye(theta.shape[-1], device=device)
     
-    ## Preprocessing to compute the matrix product using a simple product
-    diagA = torch.diagonal(A, dim1=-2, dim2=-1)
-    dA = diagA.unsqueeze(-1)
-    dA = dA.repeat(1,1,d)
+    ## Random orthogonal matrices
+    Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
+    P, _ = torch.linalg.qr(Z)
     
-    return sliced_cost_spd(Xs, Xt, diagA=dA, u_weights=u_weights, 
+    A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
+    
+    return sliced_cost_spd(Xs, Xt, A, u_weights=u_weights, 
                            v_weights=v_weights, p=p)
 
 
+def sliced_wasserstein_spd_diagbasis(Xs, Xt, num_projections, device,
+                           u_weights=None, v_weights=None, p=2):
+    """
+        Parameters:
+        Xs: ndarray, shape (n_batch, d, d)
+            Samples in the source domain
+        Xt: ndarray, shape (m_batch, d, d)
+            Samples in the target domain
+        num_projections: int
+            Number of projections
+        device: str
+        p: float
+            Power of SW. Need to be >= 1.
+    """
+    n, d, _ = Xs.shape
+
+    # Random projection directions, shape (d-1, num_projections)
+    theta = np.random.normal(size=(num_projections, d))
+    theta = F.normalize(torch.from_numpy(theta), p=2, dim=-1).type(Xs.dtype).to(device)
+    
+    A = theta[:,None] * torch.eye(theta.shape[-1], device=device)
+    
+    ## Preprocessing to compute the matrix product using a simple product
+    #diagA = torch.diagonal(A, dim1=-2, dim2=-1)
+    #dA = diagA.unsqueeze(-1)
+    #dA = dA.repeat(1,1,d)
+    
+    return sliced_cost_spd(Xs, Xt, A, u_weights=u_weights, 
+                           v_weights=v_weights, p=p)
 
 
 def get_quantiles(x, ts, weights=None):
@@ -139,25 +162,21 @@ def get_quantiles(x, ts, weights=None):
     return X_icdf
 
 
-def get_features(x, diagA, ts, weights=None, p=2):
+def get_features(x, A, ts, weights=None, p=2):
     """
         Inputs:
         - x: ndarray, shape (n_batch, d, d)
             Samples of SPD
-        - diagA: Diagonal of eigenvalues of Symmetric matrice with norm 1 (format: should be preprocessed by using 
-            diagA = torch.diagonal(A, dim1=-2, dim2=-1)
-            diagA = diagA.unsqueeze(-1)
-            diagA = diagA.repeat(1,1,2)
-        )
+        - A: Symmetric matrices on which to project
         - ts: uniform samples on [0,1]
         - weights: weight of each sample, if None, uniform weights
         - p
     """
-    num_projs, _, _ = diagA.shape
+    num_projs, _, _ = A.shape
     num_unifs = len(ts)
     
     log_x = linalg.sym_logm(x)
-    Xp = busemann_spd(log_x, diagA).reshape(-1, num_projs)
+    Xp = busemann_spd(log_x, A).reshape(-1, num_projs)
     q_Xp = get_quantiles(Xp.T, ts, weights)
     
     return q_Xp / (num_projs * num_unifs)**(1/p)
@@ -187,33 +206,25 @@ def sliced_wasserstein_spd_phi(Xs, Xt, num_projections, num_ts,
     theta = np.random.normal(size=(num_projections, d))
     theta = F.normalize(torch.from_numpy(theta), p=2, dim=-1).type(Xs.dtype).to(device)
 
-    A = theta[:,None] * torch.eye(theta.shape[-1], device=device)
+    D = theta[:,None] * torch.eye(theta.shape[-1], device=device)
+    
+    ## Random orthogonal matrices
+    Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
+    P, _ = torch.linalg.qr(Z)
+    
+    A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
 
     ## Preprocessing to compute the matrix product using a simple product
-    diagA = torch.diagonal(A, dim1=-2, dim2=-1)
-    dA = diagA.unsqueeze(-1)
-    dA = dA.repeat(1,1,d)
+    #diagA = torch.diagonal(A, dim1=-2, dim2=-1)
+    #dA = diagA.unsqueeze(-1)
+    #dA = dA.repeat(1,1,d)
 
     ts = torch.rand((num_ts,), device=device)
     
-#     log_Xs = linalg.sym_logm(Xs)
-#     log_Xt = linalg.sym_logm(Xt)
 
-#     ## Busemann Coordinates
-#     Xps = busemann_spd(log_Xs, dA).reshape(-1, num_projections)
-#     Xpt = busemann_spd(log_Xt, dA).reshape(-1, num_projections)
-    
-    
-#     q_Xs = get_quantiles(Xps.T, ts)
-#     q_Xt = get_quantiles(Xpt.T, ts)
-    
-#     features_Xs = q_Xs / np.sqrt(num_projections * num_ts)
-#     features_Xt = q_Xt / np.sqrt(num_projections * num_ts)
-
-    features_Xs = get_features(Xs, dA, ts, u_weights, p=p)
-    features_Xt = get_features(Xt, dA, ts, v_weights, p=p)
+    features_Xs = get_features(Xs, A, ts, u_weights, p=p)
+    features_Xt = get_features(Xt, A, ts, v_weights, p=p)
     
     if p==2:
         return torch.sum(torch.square(features_Xs-features_Xt))
     
-
