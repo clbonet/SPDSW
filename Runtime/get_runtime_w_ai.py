@@ -65,4 +65,4 @@ if __name__ == "__main__":
 
                     
     for i, d in enumerate(ds):
-        np.savetxt("./Comparison_AIW_d"+str(d), L_w[i,:,1:])
+        np.savetxt("./Results/Comparison_AIW_d"+str(d), L_w[i,:,1:])

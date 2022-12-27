@@ -58,4 +58,4 @@ if __name__ == "__main__":
                     
     for i, d in enumerate(ds):
         for l, n_projs in enumerate(projs):
-            np.savetxt("./Comparison_SWSPDp_projs_"+str(n_projs)+"_d"+str(d), L_swspd[i, l, :, 1:])
+            np.savetxt("./Results/Comparison_SWSPDp_projs_"+str(n_projs)+"_d"+str(d), L_swspd[i, l, :, 1:])
