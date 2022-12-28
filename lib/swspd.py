@@ -4,6 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 
 from geoopt import linalg
+from scipy.stats import ortho_group
 
 # from logm import logm
 from utils_spd import busemann_spd
@@ -101,8 +102,9 @@ def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
     D = theta[:,None] * torch.eye(theta.shape[-1], device=device)
     
     ## Random orthogonal matrices
-    Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
-    P, _ = torch.linalg.qr(Z)
+    #Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
+    #P, _ = torch.linalg.qr(Z)
+    P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
     
     A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
     
@@ -209,8 +211,9 @@ def sliced_wasserstein_spd_phi(Xs, Xt, num_projections, num_ts,
     D = theta[:,None] * torch.eye(theta.shape[-1], device=device)
     
     ## Random orthogonal matrices
-    Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
-    P, _ = torch.linalg.qr(Z)
+    #Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
+    #P, _ = torch.linalg.qr(Z)
+    P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
     
     A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
 
