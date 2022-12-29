@@ -9,7 +9,7 @@ available on http://bnci-horizon-2020.eu/database/data-sets
 import numpy as np
 import scipy.io as sio
 
-from filters import load_filterbank, butter_fir_filter
+from .filters import load_filterbank, butter_fir_filter
 
 __author__ = "Michael Hersche and Tino Rellstab"
 __email__ = "herschmi@ethz.ch,tinor@ethz.ch"

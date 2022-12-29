@@ -5,8 +5,8 @@
 import numpy as np 
 from scipy.special import binom
 import pyriemann.utils.mean as rie_mean
-from filters import butter_fir_filter
-from eig import gevd
+from .filters import butter_fir_filter
+from .eig import gevd
 
 __author__ = "Michael Hersche and Tino Rellstab"
 __email__ = "herschmi@ethz.ch,tinor@ethz.ch"

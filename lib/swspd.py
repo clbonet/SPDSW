@@ -7,7 +7,7 @@ from geoopt import linalg
 from scipy.stats import ortho_group
 
 # from logm import logm
-from utils_spd import busemann_spd
+from .utils_spd import busemann_spd
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
