@@ -18,9 +18,11 @@ __email__ = "herschmi@ethz.ch,tinor@ethz.ch"
 
 def get_cov(data):
     fs = 250 # Sampling frequency
-    bw = [25] ## bandwidth
+    # bw = [25] ## bandwidth [2, 4, 8, 16, 32]
+    bw = [2, 4, 8, 16, 32]
+    max_freq = 40
     forder = 8
-    max_freq = 30
+    # max_freq = 30
     ftype = "butter"
 
     time_windows_flt = np.array([[2.5,4.5], [4,6], [2.5,6],
