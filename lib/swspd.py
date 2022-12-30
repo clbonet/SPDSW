@@ -82,6 +82,9 @@ def sliced_cost_spd(Xs, Xt, A, u_weights=None, v_weights=None, p=1):
 def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
                            u_weights=None, v_weights=None, p=2):
     """
+        Ref sampling uniform orthogonal matrix:
+        Mezzadri, Francesco. "How to generate random matrices from the classical compact groups." arXiv preprint math-ph/0609050 (2006).
+        
         Parameters:
         Xs: ndarray, shape (n_batch, d, d)
             Samples in the source domain
@@ -102,9 +105,12 @@ def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
     D = theta[:,None] * torch.eye(theta.shape[-1], device=device)
     
     ## Random orthogonal matrices
-    #Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
-    #P, _ = torch.linalg.qr(Z)
-    P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
+    Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
+    Q, R = torch.linalg.qr(Z)
+    lambd = torch.diagonal(R, dim1=-2, dim2=-1)
+    lambd = lambd / torch.abs(lambd)
+    P = lambd[:,None]*Q
+    #P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
     
     A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
     
@@ -211,9 +217,12 @@ def sliced_wasserstein_spd_phi(Xs, Xt, num_projections, num_ts,
     D = theta[:,None] * torch.eye(theta.shape[-1], device=device)
     
     ## Random orthogonal matrices
-    #Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
-    #P, _ = torch.linalg.qr(Z)
-    P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
+    Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
+    Q, R = torch.linalg.qr(Z)
+    lambd = torch.diagonal(R, dim1=-2, dim2=-1)
+    lambd = lambd / torch.abs(lambd)
+    P = lambd[:,None]*Q
+    #P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
     
     A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
 
