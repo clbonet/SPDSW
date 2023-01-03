@@ -69,8 +69,11 @@ def sliced_cost_spd(Xs, Xt, A, u_weights=None, v_weights=None, p=1):
     log_Xt = linalg.sym_logm(Xt)
 
     ## Busemann Coordinates
-    Xps = busemann_spd(log_Xs, A).reshape(-1, n_proj)
-    Xpt = busemann_spd(log_Xt, A).reshape(-1, n_proj)
+    prod_Xs = (A[None]*log_Xs[:,None]).reshape(n, n_proj,-1)
+    Xps = prod_Xs.sum(-1) # busemann_spd(log_Xs, A).reshape(-1, n_proj)
+    
+    prod_Xt = (A[None]*log_Xt[:,None]).reshape(m, n_proj,-1)
+    Xpt = prod_Xt.sum(-1) # busemann_spd(log_Xt, A).reshape(-1, n_proj)
     
     return torch.mean(emd1D(Xps.T,Xpt.T,
                        u_weights=u_weights,
@@ -110,7 +113,12 @@ def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
     lambd = torch.diagonal(R, dim1=-2, dim2=-1)
     lambd = lambd / torch.abs(lambd)
     P = lambd[:,None]*Q
+<<<<<<< HEAD
     #P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
+=======
+#     P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
+#     P = ortho_group_rvs(d, num_projections)
+>>>>>>> da
     
     A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
     
@@ -222,14 +230,9 @@ def sliced_wasserstein_spd_phi(Xs, Xt, num_projections, num_ts,
     lambd = torch.diagonal(R, dim1=-2, dim2=-1)
     lambd = lambd / torch.abs(lambd)
     P = lambd[:,None]*Q
-    #P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
-    
+
     A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
 
-    ## Preprocessing to compute the matrix product using a simple product
-    #diagA = torch.diagonal(A, dim1=-2, dim2=-1)
-    #dA = diagA.unsqueeze(-1)
-    #dA = dA.repeat(1,1,d)
 
     ts = torch.rand((num_ts,), device=device)
     
