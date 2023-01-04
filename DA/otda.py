@@ -53,7 +53,7 @@ def cross_session(session, loss="emd", reg=1, d=22):
     log_Xs = linalg.sym_logm(cov_Xs[:,0,0]).detach().cpu().reshape(-1, d*d)
     log_Xt = linalg.sym_logm(cov_Xt[:,0,0]).detach().cpu().reshape(-1, d*d)
 
-    clf = make_pipeline(GridSearchCV(SVC(), {"C": np.logspace(-2, 2, 10)}, n_jobs=10))
+    clf = make_pipeline(GridSearchCV(LinearSVC(), {"C": np.logspace(-2, 2, 10)}, n_jobs=10))
     clf.fit(log_Xs, ys.cpu())
     score0 = clf.score(log_Xt, yt.cpu())
 
@@ -85,7 +85,7 @@ def cross_subject(session1, session2, loss="emd", reg=1, d=22):
     log_Xs = linalg.sym_logm(cov_Xs[:,0,0]).detach().cpu().reshape(-1, d*d)
     log_Xt = linalg.sym_logm(cov_Xt[:,0,0]).detach().cpu().reshape(-1, d*d)
 
-    clf = make_pipeline(GridSearchCV(SVC(), {"C": np.logspace(-2, 2, 10)}, n_jobs=10))
+    clf = make_pipeline(GridSearchCV(LinearSVC(), {"C": np.logspace(-2, 2, 10)}, n_jobs=10))
     clf.fit(log_Xs, ys.cpu())
     score0 = clf.score(log_Xt, yt.cpu())
 
@@ -111,7 +111,8 @@ if __name__ == "__main__":
     if args.task == "session":
         L = []
         for s in range(1,10):
-            L.append(cross_session(s, loss=args.loss, reg=1))
+            score_source, score_target = cross_session(s, loss=args.loss, reg=1)
+            L.append(score_target)
         
         np.savetxt("./results_leotda_cross_"+args.task+"_loss_"+args.loss, L, delimiter=",")
         

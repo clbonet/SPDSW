@@ -11,3 +11,5 @@ List of notebooks:
 - Cross_subject: Test of cross subject.
 - In folder multifreq: Code where we use multifrequences with a kernel sum.
 - otda.py: OTDA (alignment with barycentric projection) with Log-Euclidean metric
+- cross_session.py
+- cross_subject.py
