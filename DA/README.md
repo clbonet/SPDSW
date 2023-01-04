@@ -10,3 +10,4 @@ List of notebooks:
 - Basic_Transformation: only use translation and rotations (on the source).
 - Cross_subject: Test of cross subject.
 - In folder multifreq: Code where we use multifrequences with a kernel sum.
+- otda.py: OTDA (alignment with barycentric projection) with Log-Euclidean metric
