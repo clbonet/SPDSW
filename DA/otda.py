@@ -10,6 +10,7 @@ from geoopt import linalg
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC, LinearSVC
 from sklearn.pipeline import make_pipeline
+from pyriemann.utils.mean import mean_riemann
 
 sys.path.append("../lib/data")
 from get_data import get_data, get_cov
@@ -36,8 +37,31 @@ def LEDA(Xs, Xt, loss="emd", reg=1):
     return geoopt.linalg.sym_expm(cpt*len(Xt))
 
 
+def AIDA(Xs, Xt, loss="emd", reg=1):
+    d = Xs.shape[-1]
 
-def cross_session(session, loss="emd", reg=1, d=22):
+    manifold_spd = geoopt.SymmetricPositiveDefinite("AIM")        
+
+    a = torch.ones((len(Xs),), device=device, dtype=torch.float64)/len(Xs)
+    b = torch.ones((len(Xt),), device=device, dtype=torch.float64)/len(Xt)
+    M = manifold_spd.dist(Xs[:,None], Xt[None])**2
+    
+    if loss == "emd":
+        P = ot.emd(a, b, M)
+    elif loss == "sinkhorn":
+        P = ot.sinkhorn(a, b, M, reg=1)
+            
+#     log_Xt = geoopt.linalg.sym_logm(Xt)
+    cpt = torch.zeros((len(Xs), d, d))
+    for i in range(len(Xs)):
+#         cpt[i] = AIBarycenter(Xt, P[i])
+        cpt[i] = torch.tensor(mean_riemann(Xt.cpu().numpy(), sample_weight=P[i].cpu().numpy()))
+    
+    return cpt
+
+
+
+def cross_session(session, metric="le", loss="emd", reg=1, d=22):
     Xs, ys = get_data(session, True, "../dataset/")
     cov_Xs = torch.tensor(get_cov(Xs), device=device) #, dtype=torch.float32)
     ys = torch.tensor(ys, device=device, dtype=torch.long)-1
@@ -46,8 +70,12 @@ def cross_session(session, loss="emd", reg=1, d=22):
     cov_Xt = torch.tensor(get_cov(Xt), device=device) #, dtype=torch.float32)
     yt = torch.tensor(yt, device=device, dtype=torch.long)-1
 
+    
+    if metric == "le":
+        Xs2 = LEDA(cov_Xs[:,0,0], cov_Xt[:,0,0], loss=loss, reg=reg)
+    elif metric == "ai":
+        Xs2 = AIDA(cov_Xs[:,0,0], cov_Xt[:,0,0], loss=loss, reg=reg)
 
-    Xs2 = LEDA(cov_Xs[:,0,0], cov_Xt[:,0,0], loss=loss, reg=reg)
 
     ## SVM on original data
     log_Xs = linalg.sym_logm(cov_Xs[:,0,0]).detach().cpu().reshape(-1, d*d)
@@ -69,7 +97,7 @@ def cross_session(session, loss="emd", reg=1, d=22):
     return score0, score1
 
 
-def cross_subject(session1, session2, loss="emd", reg=1, d=22):
+def cross_subject(session1, session2, metric="le", loss="emd", reg=1, d=22):
     Xs, ys = get_data(session1, True, "../dataset/")
     cov_Xs = torch.tensor(get_cov(Xs), device=device) #, dtype=torch.float32)
     ys = torch.tensor(ys, device=device, dtype=torch.long)-1
@@ -78,8 +106,11 @@ def cross_subject(session1, session2, loss="emd", reg=1, d=22):
     cov_Xt = torch.tensor(get_cov(Xt), device=device) #, dtype=torch.float32)
     yt = torch.tensor(yt, device=device, dtype=torch.long)-1
 
+    if metric == "le":
+        Xs2 = LEDA(cov_Xs[:,0,0], cov_Xt[:,0,0], loss=loss, reg=reg)
+    elif metric == "ai":
+        Xs2 = AIDA(cov_Xs[:,0,0], cov_Xt[:,0,0], loss=loss, reg=reg)
 
-    Xs2 = LEDA(cov_Xs[:,0,0], cov_Xt[:,0,0], loss=loss, reg=reg)
 
     ## SVM on original data
     log_Xs = linalg.sym_logm(cov_Xs[:,0,0]).detach().cpu().reshape(-1, d*d)
@@ -104,6 +135,7 @@ def cross_subject(session1, session2, loss="emd", reg=1, d=22):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--metric", type=str, default="le", help="le or ai")
     parser.add_argument("--task", type=str, default="session", help="session or subject")
     parser.add_argument("--loss", type=str, default="emd", help="Which loss to use: emd or sinkhorn")
     args = parser.parse_args()
@@ -111,10 +143,10 @@ if __name__ == "__main__":
     if args.task == "session":
         L = []
         for s in range(1,10):
-            score_source, score_target = cross_session(s, loss=args.loss, reg=1)
+            score_source, score_target = cross_session(s, metric=args.metric, loss=args.loss, reg=1)
             L.append(score_target)
         
-        np.savetxt("./results_leotda_cross_"+args.task+"_loss_"+args.loss, L, delimiter=",")
+        np.savetxt("./results_"+args.metric+"otda_cross_"+args.task+"_loss_"+args.loss, L, delimiter=",")
         
     elif args.task == "subject":
         results_source = np.zeros((5,5))
@@ -123,9 +155,9 @@ if __name__ == "__main__":
         for i, s1 in enumerate([1,3,7,8,9]):
             for j,s2 in enumerate([1,3,7,8,9]):
                 if s1 != s2:
-                    result_source, result_target = cross_subject(s1, s2, loss=args.loss, reg=1)
+                    result_source, result_target = cross_subject(s1, s2, metric=args.metric, loss=args.loss, reg=1)
                     results_source[i,j] = result_source
                     results_target[i,j] = result_target
                     
-        np.savetxt("./results_leotda_cross_"+args.task+"_loss_"+args.loss, results_target, delimiter=",")
+        np.savetxt("./results_"+args.metric+"otda_cross_"+args.task+"_loss_"+args.loss, results_target, delimiter=",")
     
