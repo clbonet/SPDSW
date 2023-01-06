@@ -146,7 +146,7 @@ def run_test(params):
         zs = model(cov_Xs)
         
         loss = 0
-        for f in range(zs.shape[2]:
+        for f in range(zs.shape[2]):
             if distance == "lew":
                 M = manifold.dist(zs[:, 0, f][:, None], cov_Xt[:, 0, f][None]) ** 2
                 loss += 0.1 * ot.emd2(a, b, M)
