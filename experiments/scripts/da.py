@@ -95,21 +95,21 @@ def run_test(params):
 
         Xs, ys = get_data(subject, True, PATH_DATA)
         cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE)
-        ys = torch.tensor(ys, device=DEVICE, dtype=DTYPE) - 1
+        ys = torch.tensor(ys, device=DEVICE, dtype=torch.int) - 1
 
         Xt, yt = get_data(target_subject, True, PATH_DATA)
         cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE)
-        yt = torch.tensor(yt, device=DEVICE, dtype=DTYPE) - 1
+        yt = torch.tensor(yt, device=DEVICE, dtype=torch.int) - 1
 
     else:
 
         Xs, ys = get_data(subject, True, PATH_DATA)
         cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE)
-        ys = torch.tensor(ys, device=DEVICE, dtype=DTYPE) - 1
+        ys = torch.tensor(ys, device=DEVICE, dtype=torch.int) - 1
 
         Xt, yt = get_data(subject, False, PATH_DATA)
         cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE)
-        yt = torch.tensor(yt, device=DEVICE, dtype=DTYPE) - 1
+        yt = torch.tensor(yt, device=DEVICE, dtype=torch.int) - 1
 
     d = 22
     n_freq = cov_Xs.shape[2]
