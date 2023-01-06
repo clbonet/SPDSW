@@ -239,8 +239,11 @@ class SPDSW:
         n_proj, d, _ = self.A.shape
         n, _, _ = x.shape
 
-        log_x = linalg.sym_logm(x)
-        Xp = (self.A[None] * log_x[:, None]).reshape(n, n_proj, -1).sum(-1)
+        if self.sampling in ["spdsw", "logsw"]:
+            log_x = linalg.sym_logm(x)
+            Xp = (self.A[None] * log_x[:, None]).reshape(n, n_proj, -1).sum(-1)
+        elif self.sampling == "sw":
+            Xp = (self.A[None] * x[:, None]).reshape(n, n_proj, -1).sum(-1)
         q_Xp = self.get_quantiles(Xp.T, self.ts, weights)
 
         return q_Xp / ((n_proj * num_unifs) ** (1 / p))

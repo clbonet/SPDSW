@@ -54,11 +54,15 @@ def get_svc(Xs, Xt, ys, yt, d, multifreq):
 
     log_Xs = linalg.sym_logm(Xs).detach().cpu().reshape(-1, d * d)
     log_Xt = linalg.sym_logm(Xt).detach().cpu().reshape(-1, d * d)
-    
+
     if multifreq:
         clf = make_pipeline(
             FeaturesKernel(7),
-            GridSearchCV(SVC(), {"C": np.logspace(-2, 2, 10), "kernel": ["precomputed"]}, n_jobs=10)
+            GridSearchCV(
+                SVC(),
+                {"C": np.logspace(-2, 2, 10), "kernel": ["precomputed"]},
+                n_jobs=10
+            )
         )
     else:
         clf = GridSearchCV(
@@ -66,7 +70,7 @@ def get_svc(Xs, Xt, ys, yt, d, multifreq):
             {"C": np.logspace(-2, 2, 100)},
             n_jobs=N_JOBS
         )
-        
+
     clf.fit(log_Xs, ys.cpu())
     return clf.score(log_Xt, yt.cpu())
 
@@ -144,9 +148,9 @@ def run_test(params):
 
     for e in pbar:
         zs = model(cov_Xs)
-        
+
         loss = 0
-        for f in range(zs.shape[2]:
+        for f in range(n_freq):
             if distance == "lew":
                 M = manifold.dist(zs[:, 0, f][:, None], cov_Xt[:, 0, f][None]) ** 2
                 loss += 0.1 * ot.emd2(a, b, M)
@@ -166,8 +170,8 @@ def run_test(params):
 
     stop = time.time()
 
-    s_noalign = get_svc(cov_Xs[:, 0], cov_Xt[:, 0], ys, yt, d, params["multifreq"])
-    s_align = get_svc(model(cov_Xs)[:, 0], cov_Xt[:, 0], ys, yt, d, params["multifreq"])
+    s_noalign = get_svc(cov_Xs[:, 0], cov_Xt[:, 0], ys, yt, d, multifreq)
+    s_align = get_svc(model(cov_Xs)[:, 0], cov_Xt[:, 0], ys, yt, d, multifreq)
 
     return s_noalign, s_align, stop - start
 
