@@ -24,9 +24,9 @@ SEED = 2022
 NTRY = args.ntry
 EXPERIMENTS = Path(__file__).resolve().parents[1]
 RESULTS = os.path.join(EXPERIMENTS, "results/runtime.csv")
-# DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
-DEVICE = "cpu"
-DTYPE = torch.float
+DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+# DEVICE = "cpu"
+DTYPE = torch.float64
 RNG = np.random.default_rng(SEED)
 mem = Memory(
     location=os.path.join(EXPERIMENTS, "scripts/tmp_runtime/"),
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     hyperparams = {
         "n_samples": np.logspace(2, 5, num=10, dtype=int),
-        "ds": [2, 10],
+        "ds": [2], #, 10],
         "distance": ["lew", "aiw", "sinkhorn", "spdsw"],
         "n_proj": [200],
         "numitermax": [10000],
@@ -104,10 +104,20 @@ if __name__ == "__main__":
 
     keys, values = zip(*hyperparams.items())
     permuts_params = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    
 
     dico_results = {
         "time": []
     }
+    
+    for params in tqdm(permuts_params):
+        try:
+            result = run_test(params)
+        except:
+            pass
+        
+        break
+    
 
     for params in tqdm(permuts_params):
         try:
@@ -127,3 +137,4 @@ if __name__ == "__main__":
 
     results = pd.DataFrame(dico_results)
     results.to_csv(RESULTS)
+
