@@ -16,6 +16,9 @@ __email__ = "herschmi@ethz.ch,tinor@ethz.ch"
 
 
 def get_cov(data):
+    """
+        One frequency
+    """
     fs = 250 # Sampling frequency
     bw = [25] # bandwidth
     forder = 8
@@ -59,6 +62,9 @@ def get_cov(data):
 
 
 def get_cov2(data):
+    """
+        Multifrequency (hyperparameters from https://github.com/MultiScale-BCI/IV-2a)
+    """
     fs = 250 # Sampling frequency
     # bw = [25] ## bandwidth [2, 4, 8, 16, 32]
     bw = [2, 4, 8, 16, 32]

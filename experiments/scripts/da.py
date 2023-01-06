@@ -15,8 +15,9 @@ from tqdm import trange
 from geoopt import linalg
 from geoopt.optim import RiemannianSGD
 
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, SVC
 from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import make_pipeline
 
 from spdsw.spdsw import SPDSW
 from utils.download_bci import download_bci
@@ -49,16 +50,23 @@ if DOWNLOAD:
     path_data = download_bci(EXPERIMENTS)
 
 
-def get_svc(Xs, Xt, ys, yt, d):
+def get_svc(Xs, Xt, ys, yt, d, multifreq):
 
     log_Xs = linalg.sym_logm(Xs).detach().cpu().reshape(-1, d * d)
     log_Xt = linalg.sym_logm(Xt).detach().cpu().reshape(-1, d * d)
-
-    clf = GridSearchCV(
-        LinearSVC(),
-        {"C": np.logspace(-2, 2, 100)},
-        n_jobs=N_JOBS
-    )
+    
+    if multifreq:
+        clf = make_pipeline(
+            FeaturesKernel(7),
+            GridSearchCV(SVC(), {"C": np.logspace(-2, 2, 10), "kernel": ["precomputed"]}, n_jobs=10)
+        )
+    else:
+        clf = GridSearchCV(
+            LinearSVC(),
+            {"C": np.logspace(-2, 2, 100)},
+            n_jobs=N_JOBS
+        )
+        
     clf.fit(log_Xs, ys.cpu())
     return clf.score(log_Xt, yt.cpu())
 
@@ -136,17 +144,19 @@ def run_test(params):
 
     for e in pbar:
         zs = model(cov_Xs)
+        
+        loss = 0
+        for f in range(zs.shape[2]:
+            if distance == "lew":
+                M = manifold.dist(zs[:, 0, f][:, None], cov_Xt[:, 0, f][None]) ** 2
+                loss += 0.1 * ot.emd2(a, b, M)
 
-        if distance == "lew":
-            M = manifold.dist(zs[:, 0, 0][:, None], cov_Xt[:, 0, 0][None]) ** 2
-            loss = ot.emd2(a, b, M)
+            elif distance == "les":
+                M = manifold.dist(zs[:, 0, f][:, None], cov_Xt[:, 0, f][None]) ** 2
+                loss += 0.1 * ot.sinkhorn2(a, b, M, 1)
 
-        elif distance == "les":
-            M = manifold.dist(zs[:, 0, 0][:, None], cov_Xt[:, 0, 0][None]) ** 2
-            loss = ot.sinkhorn2(a, b, M, 1)
-
-        elif distance in ["spdsw", "logsw", "sw"]:
-            loss = spdsw.spdsw(zs[:, 0, 0], cov_Xt[:, 0, 0], p=2)
+            elif distance in ["spdsw", "logsw", "sw"]:
+                loss += spdsw.spdsw(zs[:, 0, f], cov_Xt[:, 0, f], p=2)
 
         loss.backward()
         optimizer.step()
@@ -156,8 +166,8 @@ def run_test(params):
 
     stop = time.time()
 
-    s_noalign = get_svc(cov_Xs[:, 0], cov_Xt[:, 0], ys, yt, d)
-    s_align = get_svc(model(cov_Xs)[:, 0], cov_Xt[:, 0], ys, yt, d)
+    s_noalign = get_svc(cov_Xs[:, 0], cov_Xt[:, 0], ys, yt, d, params["multifreq"])
+    s_align = get_svc(model(cov_Xs)[:, 0], cov_Xt[:, 0], ys, yt, d, params["multifreq"])
 
     return s_noalign, s_align, stop - start
 

@@ -6,6 +6,8 @@ import torch.nn as nn
 from geoopt import ManifoldParameter, Stiefel
 from functools import lru_cache, partial
 from typing import Callable
+from sklearn.base import BaseEstimator, TransformerMixin
+
 
 
 class Translation(nn.Module):
@@ -107,3 +109,38 @@ def sym_reeig(x: torch.Tensor) -> torch.Tensor:
     Naive implementation of `torch.matrix_exp` seems to be fast enough
     """
     return sym_funcm(x, nn.Threshold(1e-4, 1e-4))
+
+
+class FeaturesKernel(BaseEstimator, TransformerMixin):
+    
+    def __init__(self, sigma=1.):
+        self.sigma = sigma
+    
+    def fit(self, X, y=None):
+        self.X = X.astype(np.float64)
+        self.N =  np.sum(self.X ** 2, axis=(2, 3))
+#         print(self.N)
+        return self
+    
+    def transform(self, X, y=None):
+        C = 1.
+        X_d = X.astype(np.float64)
+        
+#         print("??", self.N)
+        
+        N = np.sum(X_d ** 2, axis=(2, 3))
+        for i in range(X_d.shape[1]):
+            C1 = self.N[None, :, i] + N[:, i, None]
+            C2 = X_d[:, i].reshape(X_d.shape[0], -1) @ self.X[:, i].reshape(self.X.shape[0], -1).T
+            C_current = np.exp(-(C1 - 2 * C2) / (self.sigma ** 2))
+            C += C_current
+        
+        return C 
+    
+    def get_params(self, deep=True):
+        return {"sigma": self.sigma}
+
+    def set_params(self, **parameters):
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
