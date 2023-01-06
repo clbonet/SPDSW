@@ -22,7 +22,7 @@ from sklearn.pipeline import make_pipeline
 from spdsw.spdsw import SPDSW
 from utils.download_bci import download_bci
 from utils.get_data import get_data, get_cov, get_cov2
-from utils.models import Transformations
+from utils.models import Transformations, FeaturesKernel
 
 
 parser = argparse.ArgumentParser()
