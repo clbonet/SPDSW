@@ -1,0 +1,19 @@
+savefig.bbox : tight
+savefig.format : pdf
+figure.dpi : 300
+mathtext.fontset : cm
+
+font.serif : Times New Roman
+font.family : serif
+font.size : 6
+
+xtick.labelsize : 6
+ytick.labelsize : 6
+
+legend.fontsize : 6
+legend.title_fontsize : 6
+
+figure.figsize : 5.5, 1.5
+figure.autolayout: True
+
+lines.linewidth: 1

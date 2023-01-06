@@ -1,1 +1,1 @@
-# SW_SPD
+# Sliced Wasserstein on Symmetric Positive Definite Matrices

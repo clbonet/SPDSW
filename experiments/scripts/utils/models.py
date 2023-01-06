@@ -5,41 +5,63 @@ import torch.nn as nn
 
 from geoopt import ManifoldParameter, Stiefel
 from functools import lru_cache, partial
-from typing import List, Callable, Tuple
-
-
+from typing import Callable
 
 
 class Translation(nn.Module):
-    def __init__(self, d):
+    def __init__(self, d, n_freq, device):
         super().__init__()
-        
+
         manifold_spdai = geoopt.SymmetricPositiveDefinite("AIM")        
-        self._W = ManifoldParameter(torch.eye(d, dtype=torch.double), manifold=manifold_spdai)
-        
+        self._W = ManifoldParameter(
+            torch.eye(
+                d,
+                dtype=torch.double,
+                device=device
+            )[None, :].repeat(n_freq, 1, 1),
+            manifold=manifold_spdai
+        )
+
         with torch.no_grad():
             self._W.proj_()
-        
+
     def forward(self, X):
-        return torch.matmul(self._W, torch.matmul(X, self._W.T))
-    
-    
+        return torch.matmul(self._W, torch.matmul(X, self._W.transpose(2, 1)))
+
 class Rotation(nn.Module):
-    def __init__(self, d):
+    def __init__(self, d, n_freq, device):
         super().__init__()
-        
+
         manifold = Stiefel()        
-        self._W = ManifoldParameter(torch.eye(d, dtype=torch.double), manifold=manifold)
-        
+        self._W = ManifoldParameter(
+            torch.eye(
+                d,
+                dtype=torch.double,
+                device=device)[None, :].repeat(n_freq, 1, 1),
+            manifold=manifold
+        )
+
         with torch.no_grad():
             self._W.proj_()
-        
+
     def forward(self, X):
-        return torch.matmul(self._W, torch.matmul(X, self._W.T))
-    
-    
-## Taken from geoopt
-## https://github.com/geoopt/geoopt/blob/master/geoopt/linalg/batch_linalg.py
+        return torch.matmul(self._W, torch.matmul(X, self._W.transpose(2, 1)))
+
+
+class Transformations(nn.Module):
+    def __init__(self, d, n_freq, device, seed=42):
+        super().__init__()
+        torch.manual_seed(seed)
+        self.translation = Translation(d, n_freq, device)
+        self.rotation = Rotation(d, n_freq, device)
+
+    def forward(self, X):
+        Y = self.translation(X)
+        Y = self.rotation(Y)
+        return Y
+
+# Taken from geoopt
+# https://github.com/geoopt/geoopt/blob/master/geoopt/linalg/batch_linalg.py
 
 @lru_cache(None)
 def _sym_funcm_impl(func, **kwargs):
