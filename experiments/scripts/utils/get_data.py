@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-## Taken from https://github.com/MultiScale-BCI/IV-2a
+# Taken from https://github.com/MultiScale-BCI/IV-2a
 
 '''	Loads the dataset 2a of the BCI Competition IV
 available on http://bnci-horizon-2020.eu/database/data-sets
@@ -9,16 +9,18 @@ available on http://bnci-horizon-2020.eu/database/data-sets
 import numpy as np
 import scipy.io as sio
 
-from filters import load_filterbank, butter_fir_filter
+from .filters import load_filterbank, butter_fir_filter
 
 __author__ = "Michael Hersche and Tino Rellstab"
 __email__ = "herschmi@ethz.ch,tinor@ethz.ch"
 
 
-
 def get_cov(data):
+    """
+        One frequency
+    """
     fs = 250 # Sampling frequency
-    bw = [25] ## bandwidth
+    bw = [25] # bandwidth
     forder = 8
     max_freq = 30
     ftype = "butter"
@@ -27,13 +29,11 @@ def get_cov(data):
                                 [2.5,3.5], [3,4], [4,5]])*fs
     time_windows = time_windows_flt.astype(int)
     # restrict time windows and frequency bands 
-    time_windows = time_windows[2:3] 
-    
-
+    time_windows = time_windows[2:3]
 
     filter_bank = load_filterbank(bandwidth = bw, fs = fs, order = forder, 
                                   max_freq = max_freq, ftype = ftype)
-    
+
     n_tr_trial, n_channel, _ = data.shape
     n_riemann = int((n_channel+1)*n_channel/2)
 
@@ -49,20 +49,22 @@ def get_cov(data):
     for trial_idx in range(n_tr_trial):	
 
         for temp_idx in range(n_temp): 
-            t_start, t_end  = temp_windows[temp_idx,0], temp_windows[temp_idx,1]
+            t_start, t_end = temp_windows[temp_idx, 0], temp_windows[temp_idx, 1]
             n_samples = t_end-t_start
 
-            for freq_idx in range(n_freq): 
-                # filter signal 
+            for freq_idx in range(n_freq):
+                # filter signal
                 data_filter = butter_fir_filter(data[trial_idx,:,t_start:t_end], filter_bank[freq_idx])
                 # regularized covariance matrix 
                 cov_mat[trial_idx,temp_idx,freq_idx] = 1/(n_samples-1)*np.dot(data_filter,np.transpose(data_filter)) + rho/n_samples*np.eye(n_channel)
-    
+
     return cov_mat
 
 
-
 def get_cov2(data):
+    """
+        Multifrequency (hyperparameters from https://github.com/MultiScale-BCI/IV-2a)
+    """
     fs = 250 # Sampling frequency
     # bw = [25] ## bandwidth [2, 4, 8, 16, 32]
     bw = [2, 4, 8, 16, 32]
@@ -74,16 +76,13 @@ def get_cov2(data):
     time_windows_flt = np.array([[2.5,4.5], [4,6], [2.5,6],
                                 [2.5,3.5], [3,4], [4,5]])*fs
     time_windows = time_windows_flt.astype(int)
-    # restrict time windows and frequency bands 
+    # restrict time windows and frequency bands
     time_windows = time_windows[2:3] 
-    
 
+    filter_bank = load_filterbank(bandwidth=bw, fs=fs, order=forder,
+                                  max_freq=max_freq, ftype=ftype)
 
-    filter_bank = load_filterbank(bandwidth = bw, fs = fs, order = forder, 
-                                  max_freq = max_freq, ftype = ftype)
-    
     n_tr_trial, n_channel, _ = data.shape
-    n_riemann = int((n_channel+1)*n_channel/2)
 
     n_temp = time_windows.shape[0]
     n_freq = filter_bank.shape[0]
@@ -105,7 +104,7 @@ def get_cov2(data):
                 data_filter = butter_fir_filter(data[trial_idx,:,t_start:t_end], filter_bank[freq_idx])
                 # regularized covariance matrix 
                 cov_mat[trial_idx,temp_idx,freq_idx] = 1/(n_samples-1)*np.dot(data_filter,np.transpose(data_filter)) + rho/n_samples*np.eye(n_channel)
-    
+
     return cov_mat
 
 
