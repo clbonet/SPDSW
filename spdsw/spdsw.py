@@ -97,10 +97,11 @@ class SPDSW:
             )
 
             # Random orthogonal matrices
-            Z = torch.randn(
-                (num_projections, shape_X, shape_X),
-                device=device,
-                dtype=dtype
+            Z = rng.normal(size=(num_projections, shape_X, shape_X))
+            Z = torch.tensor(
+                Z,
+                dtype=dtype,
+                device=device
             )
             Q, R = torch.linalg.qr(Z)
             lambd = torch.diagonal(R, dim1=-2, dim2=-1)
