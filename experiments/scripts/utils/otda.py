@@ -18,7 +18,7 @@ def otda(Xs, Xt, metric="ai", loss="emd", reg=1):
     
     if metric == "ai":
         manifold_spd = geoopt.SymmetricPositiveDefinite("AIM")
-    elif meric == "le":
+    elif metric == "le":
         manifold_spd = geoopt.SymmetricPositiveDefinite("LEM")        
 
     a = torch.ones((len(Xs),), device=device, dtype=torch.float64)/len(Xs)
