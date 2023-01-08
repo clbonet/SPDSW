@@ -23,7 +23,7 @@ def run_plot(results):
         y="x2",
         hue="session",
         kind="scatter",
-        height=5,
+        height=4,
         alpha=0.7
     )
 
@@ -34,6 +34,7 @@ def run_plot(results):
     plt.ylim([results["x2"].min() - 0.5, results["x2"].max() + 0.5])
     plt.xlim([results["x1"].min() - 0.5, results["x1"].max() + 0.5])
 
+    plt.legend(title="")
     plt.savefig(FIGURE, bbox_inches="tight")
 
 
