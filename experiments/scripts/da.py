@@ -29,14 +29,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--ntry", type=int, default=1, help="number of restart")
 args = parser.parse_args()
 
-N_JOBS = 10
+N_JOBS = 50
 SEED = 2022
 NTRY = args.ntry
 EXPERIMENTS = Path(__file__).resolve().parents[1]
 PATH_DATA = os.path.join(EXPERIMENTS, "data_bci/")
 RESULTS = os.path.join(EXPERIMENTS, "results/da.csv")
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
-DTYPE = torch.float
+DEVICE = "cuda:3" if torch.cuda.is_available() else "cpu"
+DTYPE = torch.float64
 RNG = np.random.default_rng(SEED)
 mem = Memory(
     location=os.path.join(EXPERIMENTS, "scripts/tmp_da/"),
@@ -98,21 +98,21 @@ def run_test(params):
             return 1., 1., 0
 
         Xs, ys = get_data(subject, True, PATH_DATA)
-        cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE)
+        cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE, dtype=DTYPE)
         ys = torch.tensor(ys, device=DEVICE, dtype=torch.int) - 1
 
         Xt, yt = get_data(target_subject, True, PATH_DATA)
-        cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE)
+        cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE, dtype=DTYPE)
         yt = torch.tensor(yt, device=DEVICE, dtype=torch.int) - 1
 
     else:
 
         Xs, ys = get_data(subject, True, PATH_DATA)
-        cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE)
+        cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE, dtype=DTYPE)
         ys = torch.tensor(ys, device=DEVICE, dtype=torch.int) - 1
 
         Xt, yt = get_data(subject, False, PATH_DATA)
-        cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE)
+        cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE, dtype=DTYPE)
         yt = torch.tensor(yt, device=DEVICE, dtype=torch.int) - 1
 
     d = 22
@@ -121,7 +121,7 @@ def run_test(params):
     n_samples_s = len(cov_Xs)
     n_samples_t = len(cov_Xt)
 
-    model = Transformations(d, n_freq, DEVICE, seed=seed)
+    model = Transformations(d, n_freq, DEVICE, DTYPE, seed=seed)
 
     start = time.time()
 
@@ -149,7 +149,7 @@ def run_test(params):
     for e in pbar:
         zs = model(cov_Xs)
 
-        loss = 0
+        loss = torch.zeros(1, device=DEVICE, dtype=DTYPE)
         for f in range(n_freq):
             if distance == "lew":
                 M = manifold.dist(zs[:, 0, f][:, None], cov_Xt[:, 0, f][None]) ** 2
@@ -180,7 +180,7 @@ if __name__ == "__main__":
 
     hyperparams = {
         "distance": ["lew", "les", "spdsw"],
-        "n_proj": [100],
+        "n_proj": [500],
         "n_epochs": [500],
         "seed": RNG.choice(10000, NTRY, replace=False),
         "subject": [1, 3, 7, 8, 9],
