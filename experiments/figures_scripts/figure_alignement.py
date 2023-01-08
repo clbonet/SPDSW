@@ -2,51 +2,46 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
-import numpy as np
-
-from sklearn.decomposition import PCA
+import seaborn as sns
 
 from pathlib import Path
 
 EXPERIMENTS = Path(__file__).resolve().parents[1]
-RESULTS = os.path.join(EXPERIMENTS, "results/data_aligned.csv")
-RESULTS_src = os.path.join(EXPERIMENTS, "results/data_src.csv")
-RESULTS_tgt = os.path.join(EXPERIMENTS, "results/data_tgt.csv")
+RESULTS = os.path.join(EXPERIMENTS, "results/data_alignment.csv")
 FIGURE = os.path.join(EXPERIMENTS, "figures/figure_alignment_particles.pdf")
 PATH_DATA = os.path.join(EXPERIMENTS, "data_bci/")
 
-# plt.style.use(
-#     os.path.join(EXPERIMENTS, 'figures_scripts/figures_style.mplstyle')
-# )
-
-# %%
-results = pd.read_csv(RESULTS)
 # %%
 
-def run_plot(log_Xs, log_Xt, log_X, d=22):
-    fig = plt.figure(figsize=(6, 4))
-    
-    log_data = np.concatenate([log_Xs, log_Xt, log_X], axis=0)
-    X_embedded = PCA(n_components=2).fit_transform(log_data)
 
-    plt.scatter(X_embedded[:len(log_Xs),0], X_embedded[:len(log_Xs),1], c="blue", label="Session 1")
-    plt.scatter(X_embedded[len(log_Xs):len(log_Xs)+len(log_Xt),0], X_embedded[len(log_Xs):len(log_Xs)+len(log_Xt),1], c="red", label="Session 2")
-    plt.scatter(X_embedded[len(log_Xs)+len(log_Xt):,0], X_embedded[len(log_Xs)+len(log_Xt):,1], c="green", label="Session 1 aligned")
+def run_plot(results):
 
-    plt.title("PCA")
+    sns.set_theme(style="ticks")
+    sns.jointplot(
+        results,
+        x="x1",
+        y="x2",
+        hue="session",
+        kind="scatter",
+        height=5,
+        alpha=0.7
+    )
 
-    plt.legend()
-    plt.xticks([])
     plt.yticks([])
+    plt.xticks([])
+    plt.ylabel("")
+    plt.xlabel("")
+    plt.ylim([results["x2"].min() - 0.5, results["x2"].max() + 0.5])
+    plt.xlim([results["x1"].min() - 0.5, results["x1"].max() + 0.5])
 
     plt.savefig(FIGURE, bbox_inches="tight")
-    
-    
+
+
+# %%
 if __name__ == "__main__":
 
-    log_Xs = np.loadtxt(RESULTS_src, delimiter=",")
-    log_Xt = np.loadtxt(RESULTS_tgt, delimiter=",")
-    log_X = np.loadtxt(RESULTS, delimiter=",")
-    
-    run_plot(log_Xs, log_Xt, log_X)
-    
+    results = pd.read_csv(RESULTS)
+    run_plot(results[["x1", "x2", "session"]])
+
+
+# %%

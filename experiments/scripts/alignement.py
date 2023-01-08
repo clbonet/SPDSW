@@ -1,8 +1,8 @@
 # %%
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+import ot
 import os
 import torch
 import geoopt
@@ -16,8 +16,6 @@ from geoopt.optim import RiemannianSGD
 from pathlib import Path
 
 from sklearn.decomposition import PCA
-
-
 from spdsw.spdsw import SPDSW
 from utils.download_bci import download_bci
 from utils.get_data import get_data, get_cov
@@ -25,11 +23,8 @@ from utils.models import Transformations
 
 
 EXPERIMENTS = Path(__file__).resolve().parents[1]
-RESULTS = os.path.join(EXPERIMENTS, "results/data_aligned.csv")
-RESULTS_src = os.path.join(EXPERIMENTS, "results/data_src.csv")
-RESULTS_tgt = os.path.join(EXPERIMENTS, "results/data_tgt.csv")
+RESULTS = os.path.join(EXPERIMENTS, "results/data_alignment.csv")
 
-FIGURE = os.path.join(EXPERIMENTS, "figures/figure_alignment_particles.pdf")
 SEED = 2022
 RNG = np.random.default_rng(SEED)
 PATH_DATA = os.path.join(EXPERIMENTS, "data_bci/")
@@ -42,12 +37,12 @@ DTYPE = torch.float64
 
 
 # Set to True to download the data in experiments/data_bci
-DOWNLOAD = False #True #False
+DOWNLOAD = False
 
 if DOWNLOAD:
     path_data = download_bci(EXPERIMENTS)
-    
-    
+
+
 def run_test(params):
     distance = params["distance"]
     n_proj = params["n_proj"]
@@ -88,12 +83,18 @@ def run_test(params):
 
     n_samples_s = len(cov_Xs)
     n_samples_t = len(cov_Xt)
-    
+
     if distance in ["lew", "les"]:
-#         a = torch.ones((n_samples_s,), device=DEVICE, dtype=DTYPE) / n_samples_s
-#         b = torch.ones((n_samples_t,), device=DEVICE, dtype=DTYPE) / n_samples_t
-        a = torch.ones((n_samples_s,), device=DEVICE, dtype=torch.float64) / n_samples_s
-        b = torch.ones((n_samples_t,), device=DEVICE, dtype=torch.float64) / n_samples_t
+        a = torch.ones(
+            (n_samples_s,),
+            device=DEVICE,
+            dtype=torch.float64
+        ) / n_samples_s
+        b = torch.ones(
+            (n_samples_t,),
+            device=DEVICE,
+            dtype=torch.float64
+        ) / n_samples_t
         manifold = geoopt.SymmetricPositiveDefinite("LEM")
 
     elif distance in ["spdsw", "logsw", "sw"]:
@@ -105,10 +106,10 @@ def run_test(params):
             random_state=seed,
             sampling=distance
         )
-    
+
     if optim_model == "transformations":
         model = Transformations(d, n_freq, DEVICE, seed=seed)
-        
+
         optimizer = RiemannianSGD(model.parameters(), lr=1e-1)
 
         pbar = trange(n_epochs)
@@ -117,11 +118,15 @@ def run_test(params):
             zs = model(cov_Xs)
 
             if distance == "lew":
-                M = manifold.dist(zs[:, 0, 0][:, None], cov_Xt[:, 0, 0][None]) ** 2
+                M = manifold.dist(
+                    zs[:, 0, 0][:, None], cov_Xt[:, 0, 0][None]
+                ) ** 2
                 loss = 0.1 * ot.emd2(a, b, M)
 
             elif distance == "les":
-                M = manifold.dist(zs[:, 0, 0][:, None], cov_Xt[:, 0, 0][None]) ** 2
+                M = manifold.dist(
+                    zs[:, 0, 0][:, None], cov_Xt[:, 0, 0][None]
+                ) ** 2
                 loss = 0.1 * ot.sinkhorn2(a, b, M, 1)
 
             elif distance in ["spdsw", "logsw", "sw"]:
@@ -132,20 +137,20 @@ def run_test(params):
             optimizer.zero_grad()
 
             pbar.set_postfix_str(f"loss = {loss.item():.3f}")
-            
-        log_X = linalg.sym_logm(model(cov_Xs)[:,0,0].detach().cpu()).reshape(-1, d*d)
 
-            
+        log_X = linalg.sym_logm(
+            model(cov_Xs)[:, 0, 0].detach().cpu()
+        ).reshape(-1, d*d)
+
     elif optim_model == "particles":
         manifold = geoopt.SymmetricPositiveDefinite("LEM")
 
-        x = deepcopy(cov_Xs[:,0,0]).requires_grad_(True)
-        
+        x = deepcopy(cov_Xs[:, 0, 0]).requires_grad_(True)
+
         optimizer = RiemannianSGD([x], lr=1000)
         optimizer._default_manifold = manifold
 
         pbar = trange(n_epochs)
-
 
         for e in pbar:
             if distance == "lew":
@@ -164,17 +169,13 @@ def run_test(params):
             optimizer.zero_grad()
 
             pbar.set_postfix_str(f"loss = {loss.item():.3f}")
-            
+
         log_X = linalg.sym_logm(x.detach().cpu()).reshape(-1, d*d)
 
-            
-    log_Xs = linalg.sym_logm(cov_Xs[:,0,0].detach().cpu()).reshape(-1, d*d)
-    log_Xt = linalg.sym_logm(cov_Xt[:,0,0].detach().cpu()).reshape(-1, d*d)
-    
+    log_Xs = linalg.sym_logm(cov_Xs[:, 0, 0].detach().cpu()).reshape(-1, d*d)
+    log_Xt = linalg.sym_logm(cov_Xt[:, 0, 0].detach().cpu()).reshape(-1, d*d)
+
     return log_Xs, log_Xt, log_X
-
-
-
 
 
 if __name__ == "__main__":
@@ -182,17 +183,16 @@ if __name__ == "__main__":
     hyperparams = {
         "distance": ["spdsw"],
         "n_proj": [1000],
-        "n_epochs": [1000],
+        "n_epochs": [500],
         "seed": RNG.choice(10000, 1, replace=False),
         "subject": [1],
         "target_subject": [3],
-        "cross_subject": [False],
-        "model": ["particles"] ## or transformations
+        "cross_subject": [True],
+        "model": ["particles"]
     }
 
     keys, values = zip(*hyperparams.items())
     permuts_params = [dict(zip(keys, v)) for v in itertools.product(*values)]
-
 
     for params in permuts_params:
         try:
@@ -200,11 +200,24 @@ if __name__ == "__main__":
             if not params["cross_subject"]:
                 params["target_subject"] = 0
             log_Xs, log_Xt, log_X = run_test(params)
-#             run_plot(log_Xs, log_Xt, log_X)
-            np.savetxt(RESULTS, log_X, delimiter=",")
-            np.savetxt(RESULTS_src, log_Xs, delimiter=",")
-            np.savetxt(RESULTS_tgt, log_Xt, delimiter=",")
+            log_data = np.concatenate([log_Xs, log_Xt, log_X], axis=0)
+            pca = PCA(n_components=2).fit(log_data)
+            dico_results = {
+                "x1": [],
+                "x2": [],
+                "session": []
+            }
+            for points, session in zip(
+                [log_Xs, log_Xt, log_X],
+                ["source", "target", "aligned"]
+            ):
+                X_points = pca.transform(points)
+                for point in X_points:
+                    dico_results["x1"].append(point[0])
+                    dico_results["x2"].append(point[1])
+                    dico_results["session"].append(session)
+
+            results = pd.DataFrame(dico_results)
+            results.to_csv(RESULTS)
         except (KeyboardInterrupt, SystemExit):
             raise
-            
-            
