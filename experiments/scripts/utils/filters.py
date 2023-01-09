@@ -62,7 +62,7 @@ def load_bands(bandwidth,f_s,max_freq = 40):
 	
 	band_counter = 0
 	for bw in bandwidth:
-		startfreq = 4
+		startfreq = 8 #4
 		while (startfreq + bw <= max_freq): 
 			f_bands[band_counter] = [startfreq, startfreq + bw]
 			

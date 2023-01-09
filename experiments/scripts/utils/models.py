@@ -2,12 +2,15 @@ import torch
 import geoopt
 
 import torch.nn as nn
+import numpy as np
 
-from geoopt import ManifoldParameter, Stiefel
+from geoopt import ManifoldParameter, Stiefel, linalg
 from functools import lru_cache, partial
 from typing import Callable
 from sklearn.base import BaseEstimator, TransformerMixin
-
+from sklearn.svm import LinearSVC, SVC
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import make_pipeline
 
 
 class Translation(nn.Module):
@@ -145,3 +148,28 @@ class FeaturesKernel(BaseEstimator, TransformerMixin):
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
+
+    
+def get_svc(Xs, Xt, ys, yt, d, multifreq=False, n_jobs=50, random_state=None):
+
+    log_Xs = linalg.sym_logm(Xs).detach().cpu().reshape(-1, d * d)
+    log_Xt = linalg.sym_logm(Xt).detach().cpu().reshape(-1, d * d)
+
+    if multifreq:
+        clf = make_pipeline(
+            FeaturesKernel(7),
+            GridSearchCV(
+                SVC(random_state=random_state),
+                {"C": np.logspace(-2, 2, 10), "kernel": ["precomputed"]},
+                n_jobs=n_jobs
+            )
+        )
+    else:
+        clf = GridSearchCV(
+            LinearSVC(random_state=random_state),
+            {"C": np.logspace(-2, 2, 100)},
+            n_jobs=n_jobs
+        )
+
+    clf.fit(log_Xs, ys.cpu())
+    return clf.score(log_Xt, yt.cpu())
