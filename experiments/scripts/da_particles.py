@@ -1,3 +1,4 @@
+import warnings
 import torch
 import argparse
 import time
@@ -11,22 +12,24 @@ import os
 from pathlib import Path
 from joblib import Memory
 from tqdm import trange
+from copy import deepcopy
 
 from geoopt import linalg
 from geoopt.optim import RiemannianSGD
 
-from sklearn.svm import LinearSVC, SVC
-from sklearn.model_selection import GridSearchCV
-from sklearn.pipeline import make_pipeline
-
 from spdsw.spdsw import SPDSW
 from utils.download_bci import download_bci
 from utils.get_data import get_data, get_cov, get_cov2
-from utils.models import Transformations, FeaturesKernel
+from utils.models import Transformations, FeaturesKernel, get_svc
 
+
+warnings.simplefilter("ignore")
+os.environ["PYTHONWARNINGS"] = "ignore"
+# os.environ["PYTHONWARNINGS"] = "ignore::ConvergenceWarning:sklearn.svm.LinearSVC"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ntry", type=int, default=1, help="number of restart")
+parser.add_argument("--task", type=str, default="session", help="session or subject")
 args = parser.parse_args()
 
 N_JOBS = 50
@@ -34,12 +37,12 @@ SEED = 2022
 NTRY = args.ntry
 EXPERIMENTS = Path(__file__).resolve().parents[1]
 PATH_DATA = os.path.join(EXPERIMENTS, "data_bci/")
-RESULTS = os.path.join(EXPERIMENTS, "results/da.csv")
-DEVICE = "cuda:3" if torch.cuda.is_available() else "cpu"
+RESULTS = os.path.join(EXPERIMENTS, "results/da_particles.csv")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float64
 RNG = np.random.default_rng(SEED)
 mem = Memory(
-    location=os.path.join(EXPERIMENTS, "scripts/tmp_da/"),
+    location=os.path.join(EXPERIMENTS, "scripts/tmp_da_particles/"),
     verbose=0
 )
 
@@ -50,29 +53,7 @@ if DOWNLOAD:
     path_data = download_bci(EXPERIMENTS)
 
 
-def get_svc(Xs, Xt, ys, yt, d, multifreq):
 
-    log_Xs = linalg.sym_logm(Xs).detach().cpu().reshape(-1, d * d)
-    log_Xt = linalg.sym_logm(Xt).detach().cpu().reshape(-1, d * d)
-
-    if multifreq:
-        clf = make_pipeline(
-            FeaturesKernel(7),
-            GridSearchCV(
-                SVC(),
-                {"C": np.logspace(-2, 2, 10), "kernel": ["precomputed"]},
-                n_jobs=10
-            )
-        )
-    else:
-        clf = GridSearchCV(
-            LinearSVC(),
-            {"C": np.logspace(-2, 2, 100)},
-            n_jobs=N_JOBS
-        )
-
-    clf.fit(log_Xs, ys.cpu())
-    return clf.score(log_Xt, yt.cpu())
 
 
 @mem.cache
@@ -98,21 +79,21 @@ def run_test(params):
             return 1., 1., 0
 
         Xs, ys = get_data(subject, True, PATH_DATA)
-        cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE, dtype=DTYPE)
+        cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE)
         ys = torch.tensor(ys, device=DEVICE, dtype=torch.int) - 1
 
         Xt, yt = get_data(target_subject, True, PATH_DATA)
-        cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE, dtype=DTYPE)
+        cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE)
         yt = torch.tensor(yt, device=DEVICE, dtype=torch.int) - 1
 
     else:
 
         Xs, ys = get_data(subject, True, PATH_DATA)
-        cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE, dtype=DTYPE)
+        cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE)
         ys = torch.tensor(ys, device=DEVICE, dtype=torch.int) - 1
 
         Xt, yt = get_data(subject, False, PATH_DATA)
-        cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE, dtype=DTYPE)
+        cov_Xt = torch.tensor(get_cov_function(Xt), device=DEVICE)
         yt = torch.tensor(yt, device=DEVICE, dtype=torch.int) - 1
 
     d = 22
@@ -121,18 +102,17 @@ def run_test(params):
     n_samples_s = len(cov_Xs)
     n_samples_t = len(cov_Xt)
 
-    model = Transformations(d, n_freq, DEVICE, DTYPE, seed=seed)
-
     start = time.time()
 
     if distance in ["lew", "les"]:
-        lr = 1e-2
-        a = torch.ones((n_samples_s,), device=DEVICE, dtype=DTYPE) / n_samples_s
-        b = torch.ones((n_samples_t,), device=DEVICE, dtype=DTYPE) / n_samples_t
-        manifold = geoopt.SymmetricPositiveDefinite("LEM")
+        lr = 10
+#         a = torch.ones((n_samples_s,), device=DEVICE, dtype=DTYPE) / n_samples_s
+#         b = torch.ones((n_samples_t,), device=DEVICE, dtype=DTYPE) / n_samples_t
+        a = torch.ones((n_samples_s,), device=DEVICE, dtype=torch.float64) / n_samples_s
+        b = torch.ones((n_samples_t,), device=DEVICE, dtype=torch.float64) / n_samples_t
 
     elif distance in ["spdsw", "logsw", "sw"]:
-        lr = 1e-1
+        lr = 1000
         spdsw = SPDSW(
             d,
             n_proj,
@@ -142,25 +122,28 @@ def run_test(params):
             sampling=distance
         )
 
-    optimizer = RiemannianSGD(model.parameters(), lr=lr)
+        
+    manifold = geoopt.SymmetricPositiveDefinite("LEM")
+    
+    x = deepcopy(cov_Xs[:,0,0]).requires_grad_(True)
+
+    optimizer = RiemannianSGD([x], lr=lr)
+    optimizer._default_manifold = manifold
 
     pbar = trange(n_epochs)
+    
 
     for e in pbar:
-        zs = model(cov_Xs)
+        if distance == "lew":
+            M = manifold.dist(x[:, None], cov_Xt[:, 0, 0][None]) ** 2
+            loss = 0.1 * ot.emd2(a, b, M)
 
-        loss = torch.zeros(1, device=DEVICE, dtype=DTYPE)
-        for f in range(n_freq):
-            if distance == "lew":
-                M = manifold.dist(zs[:, 0, f][:, None], cov_Xt[:, 0, f][None]) ** 2
-                loss += 0.1 * ot.emd2(a, b, M)
+        elif distance == "les":
+            M = manifold.dist(x[:, None], cov_Xt[:, 0, 0][None]) ** 2
+            loss = 0.1 * ot.sinkhorn2(a, b, M, 1)
 
-            elif distance == "les":
-                M = manifold.dist(zs[:, 0, f][:, None], cov_Xt[:, 0, f][None]) ** 2
-                loss += 0.1 * ot.sinkhorn2(a, b, M, 1)
-
-            elif distance in ["spdsw", "logsw", "sw"]:
-                loss += spdsw.spdsw(zs[:, 0, f], cov_Xt[:, 0, f], p=2)
+        elif distance in ["spdsw", "logsw", "sw"]:
+            loss = spdsw.spdsw(x, cov_Xt[:, 0, 0], p=2)
 
         loss.backward()
         optimizer.step()
@@ -170,24 +153,33 @@ def run_test(params):
 
     stop = time.time()
 
-    s_noalign = get_svc(cov_Xs[:, 0], cov_Xt[:, 0], ys, yt, d, multifreq)
-    s_align = get_svc(model(cov_Xs)[:, 0], cov_Xt[:, 0], ys, yt, d, multifreq)
+    s_noalign = get_svc(cov_Xs[:, 0], cov_Xt[:, 0], ys, yt, d)
+    s_align = get_svc(x, cov_Xt[:, 0], ys, yt, d)
 
     return s_noalign, s_align, stop - start
 
 
 if __name__ == "__main__":
-
     hyperparams = {
-        "distance": ["lew", "les", "spdsw"],
+        "distance": ["spdsw"], #["lew", "les", "spdsw", "logsw"],
         "n_proj": [500],
         "n_epochs": [500],
         "seed": RNG.choice(10000, NTRY, replace=False),
         "subject": [1, 3, 7, 8, 9],
         "target_subject": [1, 3, 7, 8, 9],
-        "cross_subject": [False],
+#         "cross_subject": [False],
         "multifreq": [False]
     }
+    
+    if args.task == "session":
+        hyperparams["cross_subject"] = [False]
+        hyperparams["n_epochs"] = [50]
+        RESULTS = os.path.join(EXPERIMENTS, "results/da_particles_cross_session.csv")
+    elif args.task == "subject":
+        hyperparams["cross_subject"] = [True]
+        hyperparams["n_epochs"] = [150]
+        RESULTS = os.path.join(EXPERIMENTS, "results/da_particles_cross_subject.csv")
+        
 
     keys, values = zip(*hyperparams.items())
     permuts_params = [dict(zip(keys, v)) for v in itertools.product(*values)]

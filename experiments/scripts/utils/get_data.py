@@ -20,7 +20,7 @@ def get_cov(data):
         One frequency
     """
     fs = 250 # Sampling frequency
-    bw = [25] # bandwidth
+    bw = [22] # [25] # bandwidth
     forder = 8
     max_freq = 30
     ftype = "butter"

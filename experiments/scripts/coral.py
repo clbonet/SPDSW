@@ -1,3 +1,4 @@
+import warnings
 import torch
 import argparse
 import time
@@ -13,61 +14,52 @@ from joblib import Memory
 from tqdm import trange
 
 from geoopt import linalg
+from geoopt.optim import RiemannianSGD
 
-from sklearn.svm import LinearSVC
-from sklearn.model_selection import GridSearchCV
-
+from spdsw.spdsw import SPDSW
 from utils.download_bci import download_bci
 from utils.get_data import get_data, get_cov, get_cov2
-from utils.otda import otda
+from utils.models import Transformations, FeaturesKernel, get_svc
+from utils.coral import coral
 
+
+warnings.simplefilter("ignore")
+os.environ["PYTHONWARNINGS"] = "ignore"
+# os.environ["PYTHONWARNINGS"] = "ignore::ConvergenceWarning:sklearn.svm.LinearSVC"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ntry", type=int, default=1, help="number of restart")
+parser.add_argument("--task", type=str, default="session", help="session or subject")
 args = parser.parse_args()
 
-N_JOBS = 10
+N_JOBS = 50
 SEED = 2022
 NTRY = args.ntry
 EXPERIMENTS = Path(__file__).resolve().parents[1]
 PATH_DATA = os.path.join(EXPERIMENTS, "data_bci/")
-RESULTS = os.path.join(EXPERIMENTS, "results/otda_subject.csv")
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+RESULTS = os.path.join(EXPERIMENTS, "results/coral.csv")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float64
 RNG = np.random.default_rng(SEED)
 mem = Memory(
-    location=os.path.join(EXPERIMENTS, "scripts/tmp_otda_subject/"),
+    location=os.path.join(EXPERIMENTS, "scripts/tmp_coral/"),
     verbose=0
 )
 
 # Set to True to download the data in experiments/data_bci
-DOWNLOAD = False #True #False
+DOWNLOAD = False
 
 if DOWNLOAD:
     path_data = download_bci(EXPERIMENTS)
 
 
-def get_svc(Xs, Xt, ys, yt, d):
 
-    log_Xs = linalg.sym_logm(Xs).detach().cpu().reshape(-1, d * d)
-    log_Xt = linalg.sym_logm(Xt).detach().cpu().reshape(-1, d * d)
-
-    clf = GridSearchCV(
-        LinearSVC(),
-        {"C": np.logspace(-2, 2, 100)},
-        n_jobs=N_JOBS
-    )
-    clf.fit(log_Xs, ys.cpu())
-    return clf.score(log_Xt, yt.cpu())
 
 
 @mem.cache
 def run_test(params):
-
-    distance = params["distance"]
     seed = params["seed"]
     subject = params["subject"]
-    reg = params["reg"]
 #     multifreq = params["multifreq"]
 
     cross_subject = params["cross_subject"]
@@ -103,14 +95,7 @@ def run_test(params):
     d = 22
 
 
-    if distance == "aiwotda":
-        Xs2 = otda(cov_Xs[:,0,0], cov_Xt[:,0,0], metric="ai", loss="emd")
-    elif distance == "aisotda":
-        Xs2 = otda(cov_Xs[:,0,0], cov_Xt[:,0,0], metric="ai", loss="sinkhorn", reg=reg)
-    elif distance == "lewotda":
-        Xs2 = otda(cov_Xs[:,0,0], cov_Xt[:,0,0], metric="le", loss="emd")
-    elif distance == "lesotda":
-        Xs2 = otda(cov_Xs[:,0,0], cov_Xt[:,0,0], metric="le", loss="sinkhorn", reg=reg)       
+    Xs2 = coral(cov_Xs, cov_Xt)
                 
     s_noalign = get_svc(cov_Xs[:, 0], cov_Xt[:, 0], ys, yt, d)
     s_align = get_svc(Xs2, cov_Xt[:, 0], ys, yt, d)
@@ -118,17 +103,24 @@ def run_test(params):
     return s_noalign, s_align
 
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     hyperparams = {
-        "distance": ["aiwotda", "aisotda", "lewotda", "lesotda"],
         "seed": RNG.choice(10000, NTRY, replace=False),
         "subject": [1, 3, 7, 8, 9],
         "target_subject": [1, 3, 7, 8, 9],
-        "cross_subject": [True],
+        "cross_subject": [False],
         "reg": [1],
 #         "multifreq": [False]
     }
+    
+    if args.task == "session":
+        hyperparams["cross_subject"] = [False]
+        RESULTS = os.path.join(EXPERIMENTS, "results/coral_cross_session.csv")
+    elif args.task == "subject":
+        hyperparams["cross_subject"] = [True]
+        RESULTS = os.path.join(EXPERIMENTS, "results/coral_cross_subject.csv")
+        
 
     keys, values = zip(*hyperparams.items())
     permuts_params = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -143,7 +135,6 @@ if __name__ == "__main__":
             print(params)
             if not params["cross_subject"]:
                 params["target_subject"] = 0
-
             s_noalign, s_align = run_test(params)
 
             # Storing results
