@@ -113,12 +113,6 @@ def sliced_wasserstein_spd(Xs, Xt, num_projections, device,
     lambd = torch.diagonal(R, dim1=-2, dim2=-1)
     lambd = lambd / torch.abs(lambd)
     P = lambd[:,None]*Q
-<<<<<<< HEAD
-    #P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
-=======
-#     P = torch.tensor(ortho_group.rvs(d, num_projections), device=device, dtype=torch.float64)
-#     P = ortho_group_rvs(d, num_projections)
->>>>>>> da
     
     A = torch.matmul(P, torch.matmul(D, torch.transpose(P, -2, -1)))
     
