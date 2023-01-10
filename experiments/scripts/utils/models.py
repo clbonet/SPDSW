@@ -128,6 +128,7 @@ class FeaturesKernel(BaseEstimator, TransformerMixin):
     
     def transform(self, X, y=None):
         C = 1.
+        print(X)
         X_d = X.astype(np.float64)
         
 #         print("??", self.N)
@@ -151,8 +152,12 @@ class FeaturesKernel(BaseEstimator, TransformerMixin):
 
     
 def get_svc(Xs, Xt, ys, yt, d, multifreq=False, n_jobs=50, random_state=None, kernel=False):
-    log_Xs = linalg.sym_logm(Xs).detach().cpu().reshape(-1, d * d)
-    log_Xt = linalg.sym_logm(Xt).detach().cpu().reshape(-1, d * d)
+    log_Xs = linalg.sym_logm(Xs).detach().cpu() #.reshape(-1, d * d)
+    log_Xt = linalg.sym_logm(Xt).detach().cpu() #.reshape(-1, d * d)
+    
+    if not multifreq:
+        log_Xs = log_Xs.reshape(-1, d*d)
+        log_Xt = log_Xt.reshape(-1, d*d)
 
     if multifreq:
         clf = GridSearchCV(
@@ -164,12 +169,12 @@ def get_svc(Xs, Xt, ys, yt, d, multifreq=False, n_jobs=50, random_state=None, ke
                     n_jobs=n_jobs
                 )
             ),
-            {"sigma": np.logspace(-1,1,num=10)}
+            {"featureskernel__sigma": np.logspace(-1,1,num=10)}
         )
     elif kernel:
         clf = make_pipeline(
             GridSearchCV(
-                SVC(), 
+                SVC(random_state=random_state), 
                 {"C": np.logspace(-2, 2, 10)}, 
                 n_jobs=n_jobs
             )
@@ -180,6 +185,6 @@ def get_svc(Xs, Xt, ys, yt, d, multifreq=False, n_jobs=50, random_state=None, ke
             {"C": np.logspace(-2, 2, 100)},
             n_jobs=n_jobs
         )
-
+        
     clf.fit(log_Xs, ys.cpu())
     return clf.score(log_Xt, yt.cpu())
