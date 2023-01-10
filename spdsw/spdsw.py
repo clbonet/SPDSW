@@ -133,9 +133,10 @@ class SPDSW:
             ).type(dtype).to(device)
             theta_sorted, sorter = torch.sort(theta, descending=False)
 
-            perm_matrix = F.one_hot(sorter).type(torch.float64)
+            perm_matrix = F.one_hot(sorter).type(dtype)
             D_sorted = theta_sorted[:, None] * torch.eye(
                 theta.shape[-1],
+                dtype=dtype,
                 device=device
             )
 
