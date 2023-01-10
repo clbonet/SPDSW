@@ -151,7 +151,6 @@ class FeaturesKernel(BaseEstimator, TransformerMixin):
 
     
 def get_svc(Xs, Xt, ys, yt, d, multifreq=False, n_jobs=50, random_state=None, kernel=False):
-
     log_Xs = linalg.sym_logm(Xs).detach().cpu().reshape(-1, d * d)
     log_Xt = linalg.sym_logm(Xt).detach().cpu().reshape(-1, d * d)
 
