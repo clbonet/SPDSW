@@ -243,3 +243,78 @@ def sliced_wasserstein_spd_phi(Xs, Xt, num_projections, num_ts,
     if p==2:
         return torch.sum(torch.square(features_Xs-features_Xt))
     
+
+
+def sliced_cost_aispd(Xs, Xt, A, u_weights=None, v_weights=None, p=1):
+    n = Xs.shape[1]
+    m = Xt.shape[1]
+    
+    device = Xs.device
+
+    n_proj, d, _ = A.shape
+    
+    ## Compute logM in advance since we cannot batch it        
+    log_Xs = torch.transpose(linalg.sym_logm(Xs), 0, 1)
+    log_Xt = torch.transpose(linalg.sym_logm(Xt), 0, 1)
+    
+#     print(A[:,None].shape, log_Xs.shape, (A[:,None]*log_Xs).shape)
+    ## Busemann Coordinates
+    prod_Xs = (A[None]*log_Xs).reshape(n, n_proj,-1)
+    Xps = prod_Xs.sum(-1) # busemann_spd(log_Xs, A).reshape(-1, n_proj)
+#     print(Xps.shape)
+    
+    prod_Xt = (A[None]*log_Xt).reshape(m, n_proj,-1)
+    Xpt = prod_Xt.sum(-1) # busemann_spd(log_Xt, A).reshape(-1, n_proj)
+    
+    return torch.mean(emd1D(Xps.T,Xpt.T,
+                       u_weights=u_weights,
+                       v_weights=v_weights,
+                       p=p))
+
+
+def aispdsw(Xs, Xt, num_projections, device,
+            u_weights=None, v_weights=None, p=2):
+    """
+        Parameters:
+        Xs: ndarray, shape (n_batch, d, d)
+            Samples in the source domain
+        Xt: ndarray, shape (m_batch, d, d)
+            Samples in the target domain
+        num_projections: int
+            Number of projections
+        device: str
+        p: float
+            Power of SW. Need to be >= 1.
+    """
+    n, d, _ = Xs.shape
+
+    # Random projection directions, shape (d-1, num_projections)
+    theta = np.random.normal(size=(num_projections, d))
+    theta = F.normalize(torch.from_numpy(theta), p=2, dim=-1).type(Xs.dtype).to(device)
+    theta_sorted, sorter = torch.sort(theta, descending=False)
+
+    perm_matrix = F.one_hot(sorter).type(torch.float64)
+    D_sorted = theta_sorted[:,None] * torch.eye(theta.shape[-1], device=device)
+
+    Z = torch.randn((num_projections, d, d), device=device, dtype=torch.float64)
+    Q, R = torch.linalg.qr(Z)
+    lambd = torch.diagonal(R, dim1=-2, dim2=-1)
+    lambd = lambd / torch.abs(lambd)
+    P = lambd[:,None]*Q
+
+    P2 = torch.matmul(P, torch.transpose(perm_matrix, -2, -1))
+#     P2 = P
+
+#     A = torch.matmul(P2, torch.matmul(D_sorted, torch.transpose(P2, -2, -1)))
+    
+    Xs2 = torch.matmul(torch.matmul(torch.transpose(P2, -2, -1)[:,None], Xs[None]), P2[:,None])
+    Xt2 = torch.matmul(torch.matmul(torch.transpose(P2, -2, -1)[:,None], Xt[None]), P2[:,None])
+
+    LD, pivots = torch.linalg.ldl_factor(Xs2)
+    P, L, D_Xs = torch.lu_unpack(LD, pivots)
+
+    LD, pivots = torch.linalg.ldl_factor(Xt2)
+    P, L, D_Xt = torch.lu_unpack(LD, pivots)
+            
+    return sliced_cost_aispd(D_Xs, D_Xt, D_sorted, u_weights=u_weights, 
+                           v_weights=v_weights, p=p)
