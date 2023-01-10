@@ -47,7 +47,9 @@ class SPDSW:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         if sampling not in ["spdsw", "logsw", "sw", "aispdsw"]:
-            raise Exception("'sampling' should be in ['spdsw', 'logsw', 'sw', 'aispdsw']")
+            raise Exception(
+                "'sampling' should be in ['spdsw', 'logsw', 'sw', 'aispdsw']"
+            )
 
         self.generate_projections(
             shape_X, num_projections, num_ts,
@@ -122,7 +124,7 @@ class SPDSW:
             )
 
             self.A /= torch.norm(self.A, dim=(1, 2), keepdim=True)
-            
+
         elif sampling == "aispdsw":
             # Random projection directions, shape (d-1, num_projections)
             theta = rng.normal(size=(num_projections, shape_X))
@@ -132,7 +134,10 @@ class SPDSW:
             theta_sorted, sorter = torch.sort(theta, descending=False)
 
             perm_matrix = F.one_hot(sorter).type(torch.float64)
-            D_sorted = theta_sorted[:,None] * torch.eye(theta.shape[-1], device=device)
+            D_sorted = theta_sorted[:, None] * torch.eye(
+                theta.shape[-1],
+                device=device
+            )
 
             # Random orthogonal matrices
             Z = rng.normal(size=(num_projections, shape_X, shape_X))
@@ -145,10 +150,9 @@ class SPDSW:
             lambd = torch.diagonal(R, dim1=-2, dim2=-1)
             lambd = lambd / torch.abs(lambd)
             P = lambd[:, None] * Q
-            
+
             self.P = torch.matmul(P, torch.transpose(perm_matrix, -2, -1))
             self.A = D_sorted
-            
 
         self.ts = torch.linspace(0, 1, num_ts, dtype=dtype, device=device)
 
@@ -225,23 +229,34 @@ class SPDSW:
             # Euclidean Coordinates
             prod_Xs = (self.A[None] * Xs[:, None]).reshape(n, n_proj, -1)
             prod_Xt = (self.A[None] * Xt[:, None]).reshape(m, n_proj, -1)
-        
+
         elif self.sampling in ["aispdsw"]:
-            Xs2 = torch.matmul(torch.matmul(torch.transpose(self.P, -2, -1)[:,None], Xs[None]), self.P[:,None])
-            Xt2 = torch.matmul(torch.matmul(torch.transpose(self.P, -2, -1)[:,None], Xt[None]), self.P[:,None])
-            
+            Xs2 = torch.matmul(
+                torch.matmul(
+                    torch.transpose(self.P, -2, -1)[:, None],
+                    Xs[None]
+                ),
+                self.P[:, None]
+            )
+            Xt2 = torch.matmul(
+                torch.matmul(
+                    torch.transpose(self.P, -2, -1)[:, None],
+                    Xt[None]
+                ),
+                self.P[:, None]
+            )
+
             LD, pivots = torch.linalg.ldl_factor(Xs2)
             P, L, D_Xs = torch.lu_unpack(LD, pivots)
 
             LD, pivots = torch.linalg.ldl_factor(Xt2)
             P, L, D_Xt = torch.lu_unpack(LD, pivots)
-            
+
             log_Xs = torch.transpose(linalg.sym_logm(D_Xs), 0, 1)
             log_Xt = torch.transpose(linalg.sym_logm(D_Xt), 0, 1)
-            
-            prod_Xs = (self.A[None]*log_Xs).reshape(n, n_proj,-1)
-            prod_Xt = (self.A[None]*log_Xt).reshape(m, n_proj,-1)
 
+            prod_Xs = (self.A[None]*log_Xs).reshape(n, n_proj, -1)
+            prod_Xt = (self.A[None]*log_Xt).reshape(m, n_proj, -1)
 
         Xps = prod_Xs.sum(-1)
         Xpt = prod_Xt.sum(-1)
@@ -290,12 +305,17 @@ class SPDSW:
         elif self.sampling == "sw":
             Xp = (self.A[None] * x[:, None]).reshape(n, n_proj, -1).sum(-1)
         elif self.sampling == "aispdsw":
-            x2 = torch.matmul(torch.matmul(torch.transpose(self.P, -2, -1)[:,None], x[None]), self.P[:,None])
+            x2 = torch.matmul(
+                torch.matmul(
+                    torch.transpose(self.P, -2, -1)[:, None],
+                    x[None]
+                ),
+                self.P[:, None]
+            )
             LD, pivots = torch.linalg.ldl_factor(x2)
             P, L, D_x = torch.lu_unpack(LD, pivots)
             log_x = torch.transpose(linalg.sym_logm(D_x), 0, 1)
-            Xp = (self.A[None]*log_x).reshape(n, n_proj,-1).sum(-1)
-
+            Xp = (self.A[None]*log_x).reshape(n, n_proj, -1).sum(-1)
 
         q_Xp = self.get_quantiles(Xp.T, self.ts, weights)
 
