@@ -49,6 +49,7 @@ def bandpass_filter(signal_in,f_band_nom):
 
 	return sig_filt
 
+
 def load_bands(bandwidth,f_s,max_freq = 40):
 	'''	Filter N channels with fir filter of order 101
 

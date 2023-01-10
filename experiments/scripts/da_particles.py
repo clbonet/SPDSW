@@ -161,7 +161,7 @@ def run_test(params):
 
 if __name__ == "__main__":
     hyperparams = {
-        "distance": ["spdsw"], #["lew", "les", "spdsw", "logsw"],
+        "distance": ["lew", "les", "spdsw", "logsw"],
         "n_proj": [500],
         "n_epochs": [500],
         "seed": RNG.choice(10000, NTRY, replace=False),
