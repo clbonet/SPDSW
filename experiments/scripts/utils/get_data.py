@@ -15,7 +15,7 @@ __author__ = "Michael Hersche and Tino Rellstab"
 __email__ = "herschmi@ethz.ch,tinor@ethz.ch"
 
 
-def get_cov(data):
+def get_cov(data, ftype="butter"):
     """
         One frequency
     """
@@ -23,7 +23,6 @@ def get_cov(data):
     bw = [22] # [25] # bandwidth
     forder = 8
     max_freq = 30
-    ftype = "butter"
 
     time_windows_flt = np.array([[2.5,4.5], [4,6], [2.5,6],
                                 [2.5,3.5], [3,4], [4,5]])*fs
@@ -68,9 +67,9 @@ def get_cov2(data):
     fs = 250 # Sampling frequency
     # bw = [25] ## bandwidth [2, 4, 8, 16, 32]
     bw = [2, 4, 8, 16, 32]
-    max_freq = 40
+#     max_freq = 40
     forder = 8
-    # max_freq = 30
+    max_freq = 30
     ftype = "butter"
 
     time_windows_flt = np.array([[2.5,4.5], [4,6], [2.5,6],
@@ -78,9 +77,9 @@ def get_cov2(data):
     time_windows = time_windows_flt.astype(int)
     # restrict time windows and frequency bands
     time_windows = time_windows[2:3] 
-
+    
     filter_bank = load_filterbank(bandwidth=bw, fs=fs, order=forder,
-                                  max_freq=max_freq, ftype=ftype)
+                                  max_freq=max_freq, ftype=ftype, multifreq=True)
 
     n_tr_trial, n_channel, _ = data.shape
 

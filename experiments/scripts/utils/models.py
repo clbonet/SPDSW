@@ -123,16 +123,12 @@ class FeaturesKernel(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         self.X = X.astype(np.float64)
         self.N =  np.sum(self.X ** 2, axis=(2, 3))
-#         print(self.N)
         return self
     
     def transform(self, X, y=None):
         C = 1.
-        print(X)
         X_d = X.astype(np.float64)
-        
-#         print("??", self.N)
-        
+                
         N = np.sum(X_d ** 2, axis=(2, 3))
         for i in range(X_d.shape[1]):
             C1 = self.N[None, :, i] + N[:, i, None]
@@ -155,9 +151,13 @@ def get_svc(Xs, Xt, ys, yt, d, multifreq=False, n_jobs=50, random_state=None, ke
     log_Xs = linalg.sym_logm(Xs).detach().cpu() #.reshape(-1, d * d)
     log_Xt = linalg.sym_logm(Xt).detach().cpu() #.reshape(-1, d * d)
     
+    if multifreq:
+        log_Xs = log_Xs.numpy()
+        log_Xt = log_Xt.numpy()
     if not multifreq:
         log_Xs = log_Xs.reshape(-1, d*d)
         log_Xt = log_Xt.reshape(-1, d*d)
+    
 
     if multifreq:
         clf = GridSearchCV(
@@ -171,6 +171,15 @@ def get_svc(Xs, Xt, ys, yt, d, multifreq=False, n_jobs=50, random_state=None, ke
             ),
             {"featureskernel__sigma": np.logspace(-1,1,num=10)}
         )
+#         clf = make_pipeline(
+#             FeaturesKernel(),
+#             GridSearchCV(
+#                 SVC(random_state=random_state),
+#                 {"C": np.logspace(-2, 2, 10), "kernel": ["precomputed"]},
+#                 n_jobs=n_jobs
+#             )
+#         )
+    
     elif kernel:
         clf = make_pipeline(
             GridSearchCV(

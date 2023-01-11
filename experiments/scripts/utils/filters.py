@@ -81,34 +81,61 @@ def load_bands(bandwidth,f_s,max_freq = 40):
 	return f_bands_nom
 
 
-def load_filterbank(bandwidth,fs, order = 4, max_freq = 40,ftype = 'butter'): 
-	'''	Calculate Filters bank with Butterworth filter  
+def load_bands_v2(bandwidth,f_s,max_freq = 40):
+    '''	Filter N channels with fir filter of order 101
 
-	Keyword arguments:
-	bandwith -- numpy array containing bandwiths ex. [2,4,8,16,32]
-	f_s -- sampling frequency
+    Keyword arguments:
+    bandwith -- numpy array containing bandwiths ex. [2,4,8,16,32]
+    f_s -- sampling frequency
 
-	Return:	numpy array containing filters coefficients dimesnions 'butter': [N_bands,order,6] 'fir': [N_bands,order]
-	'''
-	
-	f_band_nom = load_bands(bandwidth,fs,max_freq) # get normalized bands 
-	n_bands = f_band_nom.shape[0]
-	
-	if ftype == 'butter': 
-		filter_bank = np.zeros((n_bands,order,6))
-	elif ftype == 'fir':
-		filter_bank = np.zeros((n_bands,order))
+    Return:	numpy array of normalized frequency bands
+    '''
+    f_bands = np.zeros((99,2)).astype(float)
+
+    f_bands[0] = [8,15]
+    f_bands[1] = [15,26]
+    f_bands[2] = [26,35]
+    f_bands[3] = [35,49]
+    f_bands[4] = [0.1,1]
+    f_bands[5] = [1,4]
+    f_bands[6] = [4,8]
+
+	# convert array to normalized frequency 
+    f_bands_nom = 2*f_bands[:7]/f_s
+    return f_bands_nom
+
+
+def load_filterbank(bandwidth,fs, order = 4, max_freq = 40,ftype = 'butter', multifreq=False): 
+    '''	Calculate Filters bank with Butterworth filter  
+
+    Keyword arguments:
+    bandwith -- numpy array containing bandwiths ex. [2,4,8,16,32]
+    f_s -- sampling frequency
+
+    Return:	numpy array containing filters coefficients dimesnions 'butter': [N_bands,order,6] 'fir': [N_bands,order]
+    '''
+    if not multifreq:
+        f_band_nom = load_bands(bandwidth,fs,max_freq) # get normalized bands 
+    else:
+        f_band_nom = load_bands_v2(bandwidth, fs, max_freq)
+
+    n_bands = f_band_nom.shape[0]
+
+    if ftype == 'butter': 
+        filter_bank = np.zeros((n_bands,order,6))
+    elif ftype == 'fir':
+        filter_bank = np.zeros((n_bands,order))
 
 
 
-	for band_idx in range(n_bands):
-		if ftype == 'butter': 
-			filter_bank[band_idx] = butter(order, f_band_nom[band_idx], analog=False, btype='band', output='sos')
-		elif ftype == 'fir':
-			
-			
-			filter_bank[band_idx] = signal.firwin(order,f_band_nom[band_idx],pass_zero=False)
-	return filter_bank
+    for band_idx in range(n_bands):
+        if ftype == 'butter': 
+            filter_bank[band_idx] = butter(order, f_band_nom[band_idx], analog=False, btype='band', output='sos')
+        elif ftype == 'fir':
+
+
+            filter_bank[band_idx] = signal.firwin(order,f_band_nom[band_idx],pass_zero=False)
+    return filter_bank
 
 def butter_fir_filter(signal_in,filter_coeff):
 

@@ -78,7 +78,7 @@ def run_test(params):
             M = manifold.dist(x0[:, None], x1[None])**2
             ot.emd2(a, b, M)
 
-        elif distance in ["spdsw", "logsw", "sw"]:
+        elif distance in ["spdsw", "logsw", "sw", "aispdsw"]:
             spdsw = SPDSW(ds, n_proj, device=DEVICE, dtype=DTYPE,
                           random_state=seed, sampling=distance)
             spdsw.spdsw(x0, x1, p=2)
@@ -94,8 +94,8 @@ if __name__ == "__main__":
 
     hyperparams = {
         "n_samples": np.logspace(2, 5, num=10, dtype=int),
-        "ds": [2], #, 10],
-        "distance": ["lew", "aiw", "sinkhorn", "spdsw"],
+        "ds": [2, 10, 20],
+        "distance": ["lew", "aiw", "sinkhorn", "spdsw", "logsw", "aispdsw"],
         "n_proj": [200],
         "numitermax": [10000],
         "stop_thr": [1e-10],
