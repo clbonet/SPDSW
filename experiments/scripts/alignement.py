@@ -58,7 +58,7 @@ def run_test(params):
 
     if cross_subject:
         if target_subject == subject:
-            return 1., 1., 0
+            return 1., 1., 0, 0, 0
 
         Xs, ys = get_data(subject, True, PATH_DATA)
         cov_Xs = torch.tensor(get_cov_function(Xs), device=DEVICE)
@@ -175,7 +175,7 @@ def run_test(params):
     log_Xs = linalg.sym_logm(cov_Xs[:, 0, 0].detach().cpu()).reshape(-1, d*d)
     log_Xt = linalg.sym_logm(cov_Xt[:, 0, 0].detach().cpu()).reshape(-1, d*d)
 
-    return log_Xs, log_Xt, log_X
+    return log_Xs, log_Xt, log_X, ys, yt
 
 
 if __name__ == "__main__":
@@ -185,8 +185,8 @@ if __name__ == "__main__":
         "n_proj": [1000],
         "n_epochs": [500],
         "seed": RNG.choice(10000, 1, replace=False),
-        "subject": [1],
-        "target_subject": [3],
+        "subject": [1,3,7,8,9],
+        "target_subject": [1,3,7,8,9],
         "cross_subject": [True],
         "model": ["particles"]
     }
@@ -194,30 +194,43 @@ if __name__ == "__main__":
     keys, values = zip(*hyperparams.items())
     permuts_params = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
+    dico_results = {
+        "x1": [],
+        "x2": [],
+        "y": [],
+        "session": [],
+        "subject": [],
+        "target_subject": []
+    }
+
     for params in permuts_params:
         try:
             print(params)
             if not params["cross_subject"]:
                 params["target_subject"] = 0
-            log_Xs, log_Xt, log_X = run_test(params)
-            log_data = np.concatenate([log_Xs, log_Xt, log_X], axis=0)
-            pca = PCA(n_components=2).fit(log_data)
-            dico_results = {
-                "x1": [],
-                "x2": [],
-                "session": []
-            }
-            for points, session in zip(
-                [log_Xs, log_Xt, log_X],
-                ["source", "target", "aligned"]
-            ):
-                X_points = pca.transform(points)
-                for point in X_points:
-                    dico_results["x1"].append(point[0])
-                    dico_results["x2"].append(point[1])
-                    dico_results["session"].append(session)
+                
+            print(params["subject"], params["target_subject"])
+                
+            if params["subject"] != params["target_subject"]:
+                log_Xs, log_Xt, log_X, ys, yt = run_test(params)
+                log_data = np.concatenate([log_Xs, log_Xt, log_X], axis=0)
+                pca = PCA(n_components=2).fit(log_data)
 
-            results = pd.DataFrame(dico_results)
-            results.to_csv(RESULTS)
+                for points, session, y in zip(
+                    [log_Xs, log_Xt, log_X],
+                    ["source", "target", "aligned"],
+                    [ys, yt, ys]
+                ):
+                    X_points = pca.transform(points)
+                    for i, point in enumerate(X_points):
+                        dico_results["x1"].append(point[0])
+                        dico_results["x2"].append(point[1])
+                        dico_results["y"].append(y.detach().cpu()[i].item())
+                        dico_results["session"].append(session)
+                        dico_results["subject"].append(params["subject"])
+                        dico_results["target_subject"].append(params["target_subject"])                                                     
         except (KeyboardInterrupt, SystemExit):
             raise
+
+    results = pd.DataFrame(dico_results)
+    results.to_csv(RESULTS)

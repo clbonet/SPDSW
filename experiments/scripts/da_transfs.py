@@ -111,7 +111,11 @@ def run_test(params):
         manifold = geoopt.SymmetricPositiveDefinite("LEM")
 
     elif distance in ["spdsw", "logsw", "sw"]:
-        lr = 1e-1
+        if cross_subject:
+            lr = 5e-1
+        else:
+            lr = 1e-1
+            
         spdsw = SPDSW(
             d,
             n_proj,

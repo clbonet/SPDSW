@@ -79,7 +79,7 @@ def get_cov2(data):
     time_windows = time_windows[2:3] 
     
     filter_bank = load_filterbank(bandwidth=bw, fs=fs, order=forder,
-                                  max_freq=max_freq, ftype=ftype, multifreq=True)
+                                  max_freq=max_freq, ftype=ftype, multifreq=False)
 
     n_tr_trial, n_channel, _ = data.shape
 

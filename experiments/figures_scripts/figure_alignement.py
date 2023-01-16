@@ -51,6 +51,7 @@ def run_plot(results):
     plt.savefig(FIGURE, bbox_inches="tight")
 
 
+
 # %%
 if __name__ == "__main__":
 

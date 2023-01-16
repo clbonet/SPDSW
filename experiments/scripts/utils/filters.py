@@ -51,34 +51,34 @@ def bandpass_filter(signal_in,f_band_nom):
 
 
 def load_bands(bandwidth,f_s,max_freq = 40):
-	'''	Filter N channels with fir filter of order 101
+    '''	Filter N channels with fir filter of order 101
 
-	Keyword arguments:
-	bandwith -- numpy array containing bandwiths ex. [2,4,8,16,32]
-	f_s -- sampling frequency
+    Keyword arguments:
+    bandwith -- numpy array containing bandwiths ex. [2,4,8,16,32]
+    f_s -- sampling frequency
 
-	Return:	numpy array of normalized frequency bands
-	'''
-	f_bands = np.zeros((99,2)).astype(float)
-	
-	band_counter = 0
-	for bw in bandwidth:
-		startfreq = 8 #4
-		while (startfreq + bw <= max_freq): 
-			f_bands[band_counter] = [startfreq, startfreq + bw]
-			
-			if bw ==1: # do 1Hz steps
-				startfreq = startfreq +1
-			elif bw == 2: # do 2Hz steps
-				startfreq = startfreq +2 
-			else : # do 4 Hz steps if Bandwidths >= 4Hz
-				startfreq = startfreq +4
+    Return:	numpy array of normalized frequency bands
+    '''
+    f_bands = np.zeros((99,2)).astype(float)
 
-			band_counter += 1 
+    band_counter = 0
+    for bw in bandwidth:
+        startfreq = 8 #4
+        while (startfreq + bw <= max_freq): 
+            f_bands[band_counter] = [startfreq, startfreq + bw]
 
-	# convert array to normalized frequency 
-	f_bands_nom = 2*f_bands[:band_counter]/f_s
-	return f_bands_nom
+            if bw ==1: # do 1Hz steps
+                startfreq = startfreq +1
+            elif bw == 2: # do 2Hz steps
+                startfreq = startfreq +2 
+            else : # do 4 Hz steps if Bandwidths >= 4Hz
+                startfreq = startfreq +4
+
+            band_counter += 1 
+            
+    # convert array to normalized frequency 
+    f_bands_nom = 2*f_bands[:band_counter]/f_s
+    return f_bands_nom
 
 
 def load_bands_v2(bandwidth,f_s,max_freq = 40):
@@ -92,16 +92,21 @@ def load_bands_v2(bandwidth,f_s,max_freq = 40):
     '''
     f_bands = np.zeros((99,2)).astype(float)
 
-    f_bands[0] = [8,15]
-    f_bands[1] = [15,26]
-    f_bands[2] = [26,35]
-    f_bands[3] = [35,49]
-    f_bands[4] = [0.1,1]
-    f_bands[5] = [1,4]
-    f_bands[6] = [4,8]
+#     f_bands[0] = [8,15]
+#     f_bands[1] = [15,26]
+#     f_bands[2] = [26,35]
+#     f_bands[3] = [35,49]
+#     f_bands[4] = [0.1,1]
+#     f_bands[5] = [1,4]
+#     f_bands[6] = [4,8]
+
+    f_bands[0] = [8,12]
+    f_bands[1] = [12,16]
+    f_bands[2] = [16,24]
+    f_bands[3] = [24,30]
 
 	# convert array to normalized frequency 
-    f_bands_nom = 2*f_bands[:7]/f_s
+    f_bands_nom = 2*f_bands[:4]/f_s
     return f_bands_nom
 
 
