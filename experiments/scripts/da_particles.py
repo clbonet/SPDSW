@@ -173,11 +173,11 @@ if __name__ == "__main__":
     
     if args.task == "session":
         hyperparams["cross_subject"] = [False]
-        hyperparams["n_epochs"] = [50, 500]
+        #hyperparams["n_epochs"] = [50, 500]
         RESULTS = os.path.join(EXPERIMENTS, "results/da_particles_cross_session.csv")
     elif args.task == "subject":
         hyperparams["cross_subject"] = [True]
-        hyperparams["n_epochs"] = [250, 500]
+        #hyperparams["n_epochs"] = [250, 500]
         RESULTS = os.path.join(EXPERIMENTS, "results/da_particles_cross_subject.csv")
         
 
