@@ -37,7 +37,7 @@ NTRY = args.ntry
 EXPERIMENTS = Path(__file__).resolve().parents[1]
 PATH_DATA = os.path.join(EXPERIMENTS, "data_bci/")
 RESULTS = os.path.join(EXPERIMENTS, "results/da.csv")
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda:3"
 DTYPE = torch.float64
 RNG = np.random.default_rng(SEED)
 mem = Memory(
@@ -66,6 +66,7 @@ def run_test(params):
 
     cross_subject = params["cross_subject"]
     target_subject = params["target_subject"]
+    reg = params["reg"]
 
     if multifreq:
         get_cov_function = get_cov2
@@ -140,7 +141,7 @@ def run_test(params):
 
             elif distance == "les":
                 M = manifold.dist(zs[:, 0, f][:, None], cov_Xt[:, 0, f][None]) ** 2
-                loss += 0.1 * ot.sinkhorn2(a, b, M, 1)
+                loss += 0.1 * ot.sinkhorn2(a, b, M, reg)
 
             elif distance in ["spdsw", "logsw", "sw"]:
                 loss += spdsw.spdsw(zs[:, 0, f], cov_Xt[:, 0, f], p=2)
@@ -161,23 +162,23 @@ def run_test(params):
 
 if __name__ == "__main__":
     hyperparams = {
-        "distance": ["lew", "les", "spdsw", "logsw"],
+        "distance": ["les", "lew", "spdsw", "logsw"],
         "n_proj": [500],
         "n_epochs": [500],
         "seed": RNG.choice(10000, NTRY, replace=False),
         "subject": [1, 3, 7, 8, 9],
         "target_subject": [1, 3, 7, 8, 9],
 #         "cross_subject": [False],
-        "multifreq": [False]
+        "multifreq": [False],
+        "reg": [10.],
     }
-    
+
     if args.task == "session":
         hyperparams["cross_subject"] = [False]
         RESULTS = os.path.join(EXPERIMENTS, "results/da_cross_session.csv")
     elif args.task == "subject":
         hyperparams["cross_subject"] = [True]
         RESULTS = os.path.join(EXPERIMENTS, "results/da_cross_subject.csv")
-        
 
     keys, values = zip(*hyperparams.items())
     permuts_params = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -193,6 +194,8 @@ if __name__ == "__main__":
             print(params)
             if not params["cross_subject"]:
                 params["target_subject"] = 0
+            if params["distance"] != "les":
+                params["reg"] = 1.
             s_noalign, s_align, runtime = run_test(params)
 
             # Storing results
