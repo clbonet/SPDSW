@@ -9,9 +9,17 @@ from sklearn.decomposition import PCA
 from pathlib import Path
 
 EXPERIMENTS = Path(__file__).resolve().parents[1]
-RESULTS = os.path.join(EXPERIMENTS, "results/da_subject_projs.csv")
+# RESULTS = os.path.join(EXPERIMENTS, "results/da_subject_projs.csv")
+
 RESULTS_transfs_session = os.path.join(EXPERIMENTS, "results/da_transfs_cross_session_projs.csv")
+RESULTS_transfs_subject = os.path.join(EXPERIMENTS, "results/da_transfs_cross_subject_projs.csv")
 FIGURE_transfs_session = os.path.join(EXPERIMENTS, "figures/Evolution_accuracy_transfs_session_projs.pdf")
+FIGURE_transfs_subject = os.path.join(EXPERIMENTS, "figures/Evolution_accuracy_transfs_subject_projs.pdf")
+
+RESULTS_particles_session = os.path.join(EXPERIMENTS, "results/da_particles_cross_session_projs.csv")
+RESULTS_particles_subject = os.path.join(EXPERIMENTS, "results/da_particles_cross_subject_projs.csv")
+FIGURE_particles_session = os.path.join(EXPERIMENTS, "figures/Evolution_accuracy_particles_session_projs.pdf")
+FIGURE_particles_subject = os.path.join(EXPERIMENTS, "figures/Evolution_accuracy_particles_subject_projs.pdf")
 
 # plt.style.use(
 #     os.path.join(EXPERIMENTS, 'figures_scripts/figures_style.mplstyle')
@@ -207,6 +215,24 @@ def run_plot(results_mean, results_std, projs, subjects_src, FIGURE, d=22):
     plt.savefig(FIGURE, bbox_inches="tight")
     
     
+def run_plot2(results_mean, results_std, projs, subjects_src, FIGURE, d=22):
+    plt.figure(figsize=(3,3))
+
+    for j, s in enumerate(subjects_src):
+#         plt.plot(projs, results_mean[:,j,0], label="Subject "+str(s))
+        plt.plot(projs, results_mean[:,j,0], label=str(s))
+        plt.fill_between(projs, results_mean[:,j,0]-results_std[:,j,0], 
+                         results_mean[:,j,0]+results_std[:,j,0], alpha=0.5)
+    plt.legend(ncol=3, loc="lower center", title="Subjects") # ,fontsize=13)
+    plt.xlabel("Number of projections", fontsize=13)
+    plt.ylabel("Accuracy", fontsize=13)
+    # plt.xticks(projs)
+#     plt.title("Accuracy for subjects {1,3,7,8,9}", fontsize=13)
+    plt.grid(True)
+
+    plt.savefig(FIGURE, bbox_inches="tight")
+    
+    
 if __name__ == "__main__":
 
     results = pd.read_csv(RESULTS_transfs_session)
@@ -215,4 +241,34 @@ if __name__ == "__main__":
     projs = results["n_proj"].unique()
     
     results_mean, results_std = get_mean_session(results)
-    run_plot(results_mean, results_std, projs, subjects_src, FIGURE_transfs_session)
+    run_plot2(results_mean, results_std, projs, subjects_src, FIGURE_transfs_session)
+    
+    
+    
+    results = pd.read_csv(RESULTS_transfs_subject)
+    
+    subjects_src = results["subject"].unique()
+    projs = results["n_proj"].unique()
+    
+    results_mean, results_std = get_mean_subject(results)
+    run_plot2(results_mean, results_std, projs, subjects_src, FIGURE_transfs_subject)
+    
+    
+    
+    results = pd.read_csv(RESULTS_particles_session)
+    
+    subjects_src = results["subject"].unique()
+    projs = results["n_proj"].unique()
+    
+    results_mean, results_std = get_mean_session(results[results["n_epochs"]==500])
+    run_plot2(results_mean, results_std, projs, subjects_src, FIGURE_particles_session)
+    
+    
+    
+    results = pd.read_csv(RESULTS_particles_subject)
+    
+    subjects_src = results["subject"].unique()
+    projs = results["n_proj"].unique()
+    
+    results_mean, results_std = get_mean_subject(results)
+    run_plot2(results_mean, results_std, projs, subjects_src, FIGURE_particles_subject)
