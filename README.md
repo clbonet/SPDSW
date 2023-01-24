@@ -20,6 +20,8 @@ The procedures to reproduce the figures and experiments in the paper are describ
   python experiments/figures_scripts/figure_runtime.py
   ```
 - Table 1:
+  To download the data, put the flag ```DOWNLOAD``` to ```True``` in ```da_particles.py``` or ```da_transfs.py```.
+    
   ```
   python experiments/scripts/da_particles.py --task session --ntry 5
   python experiments/scripts/da_transfs.py --task session --ntry 5
