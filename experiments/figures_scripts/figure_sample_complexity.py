@@ -86,6 +86,7 @@ for d in dim_s:
 
 plt.xlabel(r"Number of samples")
 plt.ylabel(r"Distances")
+plt.ylabel(r"$|D^2(\hat{\mu}_n,\hat{\mu'}_n)-D^2(\mu, \mu)|$")
 
 
 # plt.legend(
