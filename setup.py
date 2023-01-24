@@ -25,7 +25,8 @@ setuptools.setup(
         'geoopt',
         'joblib',
         'pot',
-        'vedo'
+        'vedo',
+        'pyriemann'
     ],
     python_requires='>=3.8',
 )
