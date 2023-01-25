@@ -7,7 +7,7 @@ from pathlib import Path
 
 EXPERIMENTS = Path(__file__).resolve().parents[1]
 RESULTS = os.path.join(EXPERIMENTS, "results/runtime.csv")
-FIGURE = os.path.join(EXPERIMENTS, "figures/figure_runtime.pdf")
+FIGURE = os.path.join(EXPERIMENTS, "figures/figure_runtime_d20.pdf")
 
 # plt.style.use(
 #     os.path.join(EXPERIMENTS, 'figures_scripts/figures_style.mplstyle')
@@ -17,7 +17,7 @@ FIGURE = os.path.join(EXPERIMENTS, "figures/figure_runtime.pdf")
 results = pd.read_csv(RESULTS)
 # %%
 
-fig = plt.figure(figsize=(2.7, 1.2))
+fig = plt.figure(figsize=(4, 2))
 
 n_samples = results["n_samples"].unique()
 dim_s = results["ds"].unique()
@@ -27,7 +27,8 @@ dico_distances = {}
 for distance in distances:
     dico_distances[distance] = []
 
-d_s = dim_s[1]
+d_s = dim_s[2]
+
 
 for n_s in n_samples:
     for distance in distances:
@@ -50,7 +51,12 @@ for distance in distances:
         label = r"$\mathrm{AIW}$"
     elif distance == "logsw":
         label = r"$\mathrm{\log SW}$"
-    plt.plot(n_samples, dico_distances[distance], label=label, linewidth=1.)
+#     else:
+#         print(distance)
+    elif distance == "aispdsw":
+        label = r"$\mathrm{HSPDSW}$"
+        break
+    plt.plot(n_samples, dico_distances[distance], label=label, linewidth=2.)
 
 plt.xlabel(r"Number of samples")
 plt.ylabel(r"Time (s)")
@@ -58,6 +64,7 @@ plt.ylabel(r"Time (s)")
 
 plt.legend(
     bbox_to_anchor=(1, 1.02),
+#     bbox_to_anchor=(1,1.2),
     ncol=1
 )
 plt.grid(True)
