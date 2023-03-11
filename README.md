@@ -1,4 +1,21 @@
-# Sliced Wasserstein on Symmetric Positive Definite Matrices
+# Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals
+
+This repository contains the code to reproduce the experiments of the paper [Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals](https://arxiv.org/abs/). We propose in this paper a Sliced-Wasserstein distance on the space of symmetric positive definite matrices endowed with the Log-Euclidean metric.
+
+## Abstract 
+
+When dealing with electro or magnetoencephalography records, many supervised prediction tasks are solved by working with covariance matrices to summarize the signals. Learning with these matrices requires the usage of Riemanian geometry to account for their structure. In this paper, we propose a new method to deal with distributions of covariance matrices, and demonstrate its computational efficiency on M/EEG multivariate time series. More specifically, we define a Sliced-Wasserstein distance between measures of symmetric positive definite matrices that comes with strong theoretical guarantees. Then, we take advantage of its properties and kernel methods to apply this discrepancy to brain-age prediction from MEG data, and compare it to state-of-the-art algorithms based on Riemannian geometry. Finally, we show that it is an efficient surrogate to the Wasserstein distance in domain adaptation for Brain Computer Interface applications.
+
+## Citation
+
+```
+@article{bonet2023sliced,
+    title={Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals},
+    author={Clément Bonet and Benoît Malézieux and Alain Rakotomamonjy and Lucas Drumetz and Thomas Moreau and Matthieu Kowalski and Nicolas Courty},
+    year={2023},
+    journal={arXiv preprint arXiv:}
+}
+```
 
 ## Installation
 
@@ -44,4 +61,4 @@ The procedures to reproduce the figures and experiments in the paper are describ
   All other experiments on BCI for cross subject alignement can be obtained by replacing `--task session` by `--task subject`.
 
 - MEG experiments:
-  The code is mainly based on https://github.com/meeg-ml-benchmarks/brain-age-benchmark-paper, on the class `SPDSW` in `spdsw/spdsw.py`, and on the class `KernelRidgeRegression` in `scikit-learn`. The full version will be made available later to respect anonymity.
+  The code is mainly based on https://github.com/meeg-ml-benchmarks/brain-age-benchmark-paper, on the class `SPDSW` in `spdsw/spdsw.py`, and on the class `KernelRidgeRegression` in `scikit-learn`.
