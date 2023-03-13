@@ -1,6 +1,6 @@
 # Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals
 
-This repository contains the code to reproduce the experiments of the paper [Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals](https://arxiv.org/abs/). We propose in this paper a Sliced-Wasserstein distance on the space of symmetric positive definite matrices endowed with the Log-Euclidean metric.
+This repository contains the code to reproduce the experiments of the paper [Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals](https://arxiv.org/abs/2303.05798). We propose in this paper a Sliced-Wasserstein distance on the space of symmetric positive definite matrices endowed with the Log-Euclidean metric.
 
 ## Abstract 
 
@@ -13,7 +13,7 @@ When dealing with electro or magnetoencephalography records, many supervised pre
     title={Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals},
     author={Clément Bonet and Benoît Malézieux and Alain Rakotomamonjy and Lucas Drumetz and Thomas Moreau and Matthieu Kowalski and Nicolas Courty},
     year={2023},
-    journal={arXiv preprint arXiv:}
+    journal={arXiv preprint arXiv:2303.05798}
 }
 ```
 
