@@ -9,11 +9,13 @@ When dealing with electro or magnetoencephalography records, many supervised pre
 ## Citation
 
 ```
-@article{bonet2023sliced,
-    title={Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals},
-    author={Clément Bonet and Benoît Malézieux and Alain Rakotomamonjy and Lucas Drumetz and Thomas Moreau and Matthieu Kowalski and Nicolas Courty},
-    year={2023},
-    journal={arXiv preprint arXiv:2303.05798}
+@inproceedings{bonet2023sliced,
+  title={Sliced-Wasserstein on Symmetric Positive Definite Matrices for M/EEG Signals},
+  author={Bonet, Clément and Malézieux, Benoît and Rakotomamonjy, Alain and Drumetz, Lucas and Moreau, Thomas and Kowalski, Matthieu and Courty, Nicolas},
+  booktitle={International Conference on Machine Learning},
+  pages={2777--2805},
+  year={2023},
+  organization={PMLR}
 }
 ```
 
